@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cryptkeep - Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Cryptkeep Dashboard</h1>
+
+    <section id="store-section">
+      <h2>Store Password</h2>
+      <form id="store-form">
+        <label for="description">Description:</label>
+        <input type="text" id="description" required>
+
+        <label for="email">Email/Link:</label>
+        <input type="text" id="email" required>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" required>
+
+        <button type="submit">Store</button>
+      </form>
+      <p id="store-message"></p>
+    </section>
+
+    <section id="retrieve-section">
+      <h2>Retrieve Passwords</h2>
+      <input type="text" id="search" placeholder="Search by description or email">
+      <button id="search-btn">Search</button>
+      <ul id="results"></ul>
+    </section>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
