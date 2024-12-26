@@ -5,6 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Store Password</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Styling for the password suggestion box */
+    #password-suggestion {
+      display: none;
+      margin-top: 5px;
+      padding: 10px;
+      background-color: #f1f1f1;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #password-suggestion button {
+      margin-top: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+    }
+    #password-suggestion button:hover {
+      background-color: #45a049;
+    }
+    /* Styling for password strength criteria */
+    #password-criteria {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .criteria {
+      margin-bottom: 5px;
+    }
+    .criteria span {
+      margin-left: 10px;
+      color: gray;
+    }
+    .criteria.satisfied span {
+      color: green;
+    }
+    .criteria.unsatisfied span {
+      color: red;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -19,12 +61,149 @@
       <label for="password">Password:</label>
       <input type="password" id="password" required>
 
+      <!-- Password suggestion box -->
+      <div id="password-suggestion"></div>
+
+      <!-- Password criteria list -->
+      <div id="password-criteria">
+        <div class="criteria" id="length-criteria">
+          <span>Minimum 8 characters</span>
+        </div>
+        <div class="criteria" id="uppercase-criteria">
+          <span>At least one uppercase letter</span>
+        </div>
+        <div class="criteria" id="lowercase-criteria">
+          <span>At least one lowercase letter</span>
+        </div>
+        <div class="criteria" id="number-criteria">
+          <span>At least one number</span>
+        </div>
+        <div class="criteria" id="special-criteria">
+          <span>At least one special character (e.g. !@#$%^&*)</span>
+        </div>
+      </div>
+
       <button type="submit">Store</button>
     </form>
     <p id="store-message"></p>
   </div>
 
   <script>
+    // Function to generate a strong password
+    function generateStrongPassword() {
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=<>?';
+      let password = '';
+      const passwordLength = 12; // You can change the length if needed
+
+      for (let i = 0; i < passwordLength; i++) {
+        const randomIndex = Math.floor(Math.random() * characters.length);
+        password += characters[randomIndex];
+      }
+
+      return password;
+    }
+
+    // Function to check if the password is weak based on given criteria
+    function isWeakPassword(password) {
+      const minLength = 8;
+      const hasUppercase = /[A-Z]/.test(password);
+      const hasLowercase = /[a-z]/.test(password);
+      const hasNumbers = /[0-9]/.test(password);
+      const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+      // Check if password is too short or doesn't contain required types of characters
+      return password.length < minLength || !hasUppercase || !hasLowercase || !hasNumbers || !hasSpecialChars;
+    }
+
+    // Function to update the password criteria based on the password
+    function updatePasswordCriteria(password) {
+      const lengthCriteria = document.getElementById('length-criteria');
+      const uppercaseCriteria = document.getElementById('uppercase-criteria');
+      const lowercaseCriteria = document.getElementById('lowercase-criteria');
+      const numberCriteria = document.getElementById('number-criteria');
+      const specialCriteria = document.getElementById('special-criteria');
+
+      // Length check
+      if (password.length >= 8) {
+        lengthCriteria.classList.add('satisfied');
+        lengthCriteria.classList.remove('unsatisfied');
+      } else {
+        lengthCriteria.classList.add('unsatisfied');
+        lengthCriteria.classList.remove('satisfied');
+      }
+
+      // Uppercase check
+      if (/[A-Z]/.test(password)) {
+        uppercaseCriteria.classList.add('satisfied');
+        uppercaseCriteria.classList.remove('unsatisfied');
+      } else {
+        uppercaseCriteria.classList.add('unsatisfied');
+        uppercaseCriteria.classList.remove('satisfied');
+      }
+
+      // Lowercase check
+      if (/[a-z]/.test(password)) {
+        lowercaseCriteria.classList.add('satisfied');
+        lowercaseCriteria.classList.remove('unsatisfied');
+      } else {
+        lowercaseCriteria.classList.add('unsatisfied');
+        lowercaseCriteria.classList.remove('satisfied');
+      }
+
+      // Number check
+      if (/[0-9]/.test(password)) {
+        numberCriteria.classList.add('satisfied');
+        numberCriteria.classList.remove('unsatisfied');
+      } else {
+        numberCriteria.classList.add('unsatisfied');
+        numberCriteria.classList.remove('satisfied');
+      }
+
+      // Special character check
+      if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        specialCriteria.classList.add('satisfied');
+        specialCriteria.classList.remove('unsatisfied');
+      } else {
+        specialCriteria.classList.add('unsatisfied');
+        specialCriteria.classList.remove('satisfied');
+      }
+    }
+
+    // Show password suggestion when the password input field is focused
+    document.getElementById('password').addEventListener('input', function() {
+      const password = document.getElementById('password').value;
+      const suggestionBox = document.getElementById('password-suggestion');
+      
+      // Update the password criteria
+      updatePasswordCriteria(password);
+
+      if (isWeakPassword(password)) {
+        const generatedPassword = generateStrongPassword();
+        
+        suggestionBox.innerHTML = `
+          <p>Your password seems weak. Consider using a stronger password.</p>
+          <p>Suggested Password: <strong>${generatedPassword}</strong></p>
+          <button type="button" id="use-suggested-password">Use Suggested Password</button>
+        `;
+        suggestionBox.style.display = 'block';
+
+        // Event listener for using the suggested password
+        document.getElementById('use-suggested-password').addEventListener('click', function() {
+          document.getElementById('password').value = generatedPassword;
+          suggestionBox.style.display = 'none'; // Hide suggestion after selecting the password
+
+          // Update password criteria again for the selected suggested password
+          updatePasswordCriteria(generatedPassword);
+
+          // Show a message to change password on the platform
+          document.getElementById('store-message').innerText = 'You should change your password on the original platform too, to avoid any confusions.';
+        });
+      } else {
+        suggestionBox.style.display = 'none'; // Hide suggestion if the password is strong
+      }
+    });
+
+    // Event listener for form submission
     document.getElementById('store-form').addEventListener('submit', function(event) {
       event.preventDefault();
       const description = document.getElementById('description').value;
