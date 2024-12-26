@@ -99,9 +99,9 @@ app.get('/api/retrieve', (req, res) => {
 
 app.post('/api/register', (req, res) => {
   const { masterPassword } = req.body;
-  if (fs.existsSync(VAULT_FILE)) {
-    return res.status(400).json({ message: "Vault already exists. Please log in." });
-  }
+  // if (fs.existsSync(VAULT_FILE)) {
+  //   return res.status(400).json({ message: "Vault already exists. Please log in." });
+  // }
   try {
     const initialData = {}; // Empty vault
     storeEncryptedData(VAULT_FILE, initialData, masterPassword);
