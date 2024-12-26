@@ -1,5 +1,5 @@
 const apiUrl = 'http://localhost:4000';
-
+//const registerForm=document.getElementById('register-form');
 document.addEventListener('DOMContentLoaded', async () => {
   // Ensure face-api.js is loaded
   if (typeof faceapi === 'undefined') {
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
   
   console.log('Face API models loaded');
-  startCamera();
+ 
 });
 
 // Function to start the camera
@@ -69,33 +69,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Register form handler
-  document.getElementById('register-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  //Register form handler
+//   document.getElementById('register-form')?.addEventListener('submit', async (e) => {
+//     e.preventDefault();
     
-    const username = document.getElementById('username').value;
-    const masterPassword = document.getElementById('masterPassword').value;
+//     const username = document.getElementById('username').value;
+//     const masterPassword = document.getElementById('masterPassword').value;
 
-    // Send registration request to the server
-    const response = await fetch(`${apiUrl}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password: masterPassword }),
-    });
+//     // Send registration request to the server
+//     const response = await fetch(`${apiUrl}/register`, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       body: JSON.stringify({ username, password: masterPassword }),
+//     });
 
-    // Assuming the response is a JSON object
-    const result = await response.json();
+//     // Assuming the response is a JSON object
+//     const result = await response.json();
 
-    // Show registration result message
-    if (response.ok) {
-      document.getElementById('register-message').innerText = 'Registration successful!';
-      document.getElementById('register-message').style.color = 'green';
-    } else {
-      document.getElementById('register-message').innerText = result.message || 'An error occurred during registration.';
-      document.getElementById('register-message').style.color = 'red';
-    }
-  });
-});
+//     // Show registration result message
+//     if (response.ok) {
+//       document.getElementById('register-message').innerText = 'Registration successful!';
+//       document.getElementById('register-message').style.color = 'green';
+//     } else {
+//       document.getElementById('register-message').innerText = result.message || 'An error occurred during registration.';
+//       document.getElementById('register-message').style.color = 'red';
+//     }
+//   });
+ });
 
 
 // Store password form handler
@@ -201,26 +201,97 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('masterPassword');
   const usernameFeedback = document.getElementById('username-feedback');
   const passwordFeedback = document.getElementById('password-feedback');
+  const registerForm = document.getElementById('register-form');
+  const registerFaceIdBtn = document.getElementById('register-faceid-btn');
+  const registerMessage = document.getElementById('register-message');
 
-  // Validate username
+  // Validate username and password
   usernameInput.addEventListener('input', () => {
     if (validator.isAlphanumeric(usernameInput.value)) {
       usernameFeedback.textContent = '✓ Valid username';
-      usernameFeedback.style.color = 'green';
+      usernameFeedback.classList.remove('text-red-500');
+      usernameFeedback.classList.add('text-green-500');
     } else {
       usernameFeedback.textContent = '✗ Username must be alphanumeric';
-      usernameFeedback.style.color = 'red';
+      usernameFeedback.classList.remove('text-green-500');
+      usernameFeedback.classList.add('text-red-500');
     }
   });
 
-  // Validate password
   passwordInput.addEventListener('input', () => {
     if (validator.isLength(passwordInput.value, { min: 8 })) {
       passwordFeedback.textContent = '✓ Password length is sufficient';
-      passwordFeedback.style.color = 'green';
+      passwordFeedback.classList.remove('text-red-500');
+      passwordFeedback.classList.add('text-green-500');
     } else {
       passwordFeedback.textContent = '✗ Password must be at least 8 characters';
-      passwordFeedback.style.color = 'red';
+      passwordFeedback.classList.remove('text-green-500');
+      passwordFeedback.classList.add('text-red-500');
+    }
+  });
+
+  // Handle form submission
+  registerForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const username = usernameInput.value;
+    const password = passwordInput.value;
+
+    if (!validator.isAlphanumeric(username)) {
+      registerMessage.textContent = 'Error: Username must be alphanumeric.';
+      registerMessage.classList.add('text-red-500');
+      return;
+    }
+
+    if (!validator.isLength(password, { min: 8 })) {
+      registerMessage.textContent = 'Error: Password must be at least 8 characters long.';
+      registerMessage.classList.add('text-red-500');
+      return;
+    }
+
+    // Simulate successful registration
+    registerMessage.textContent = 'Registration successful!';
+    registerMessage.classList.remove('text-red-500');
+    registerMessage.classList.add('text-green-500');
+
+    // Show "Register with Face ID" button
+    registerFaceIdBtn.classList.remove('hidden');
+  });
+});
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const loginFaceIdBtn = document.getElementById('login-faceid-btn');
+  const faceIdSection = document.getElementById('faceid-section');
+  const captureLoginBtn = document.getElementById('capture-login-btn');
+  const loadingSpinner = document.getElementById('loading-spinner');
+
+  // Toggle Face ID section
+  loginFaceIdBtn.addEventListener('click', () => {
+    faceIdSection.style.display = faceIdSection.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Start camera and show loading spinner when capturing
+  captureLoginBtn.addEventListener('click', async () => {
+    try {
+      loadingSpinner.style.display = 'flex'; // Show spinner
+      const video = document.getElementById('video');
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      video.play();
+
+      // Simulate a delay for capturing and processing
+      setTimeout(() => {
+        loadingSpinner.style.display = 'none'; // Hide spinner after capturing
+      }, 3000); // Adjust time as needed for actual processing
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      loadingSpinner.style.display = 'none'; // Hide spinner on error
+      alert('Unable to access the camera.');
     }
   });
 });
+
+
+
+

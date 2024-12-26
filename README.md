@@ -14,6 +14,9 @@ clone the repo:</br>
   <li>The HTML files are in the public folder for the frontend</li>
   <li>Backend is on cryptkeep.js file</li>
   </ol>
+</br>
+Dependancies for faceid: npm install face-api.js validator mongoose
+
   
 
 
