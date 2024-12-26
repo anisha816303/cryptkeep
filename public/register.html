@@ -5,34 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cryptkeep - Register</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- Link to face-api.js (Ensure it's browser-compatible) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/validator/validator.min.js"></script>
+
 </head>
 <body>
   <div class="container">
     <h1>Register</h1>
     <form id="register-form">
-      <label for="masterPassword">Master Password:</label>
-      <input type="password" id="masterPassword" required>
+      <label for="username">Username:</label>
+  <input type="text" id="username" required>
+  <span id="username-feedback" class="feedback"></span> <!-- Feedback for username -->
+  
+  <label for="masterPassword">Master Password:</label>
+  <input type="password" id="masterPassword" required>
+  <span id="password-feedback" class="feedback"></span> <!-- Feedback for password -->
       <button type="submit">Register</button>
     </form>
+    <button id="register-faceid-btn">Register with Face ID</button>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="capture-btn" style="display:none;">Capture</button>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
     <p id="register-message"></p>
     <a href="index.html">Already have an account? Log in here.</a>
   </div>
-  <script>
-    const apiUrl = '/api';
-    document.getElementById('register-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const masterPassword = document.getElementById('masterPassword').value;
-      const response = await fetch(`${apiUrl}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ masterPassword }),
-      });
-      const result = await response.json();
-      document.getElementById('register-message').innerText = result.message;
-      if (response.ok) {
-        setTimeout(() => window.location.href = 'index.html', 2000); // Redirect to login
-      }
-    });
-  </script>
+  <!-- Link to your script.js -->
+  <script src="script.js"></script>
 </body>
 </html>
