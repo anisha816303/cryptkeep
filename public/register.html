@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cryptkeep - Register</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Register</h1>
+    <form id="register-form">
+      <label for="masterPassword">Master Password:</label>
+      <input type="password" id="masterPassword" required>
+      <button type="submit">Register</button>
+    </form>
+    <p id="register-message"></p>
+    <a href="index.html">Already have an account? Log in here.</a>
+  </div>
+  <script>
+    const apiUrl = '/api';
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const masterPassword = document.getElementById('masterPassword').value;
+      const response = await fetch(`${apiUrl}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masterPassword }),
+      });
+      const result = await response.json();
+      document.getElementById('register-message').innerText = result.message;
+      if (response.ok) {
+        setTimeout(() => window.location.href = 'index.html', 2000); // Redirect to login
+      }
+    });
+  </script>
+</body>
+</html>

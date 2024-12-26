@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store Password</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Store Password</h1>
+    <form id="store-form">
+      <label for="description">Description:</label>
+      <input type="text" id="description" required>
+
+      <label for="email">Email/Link:</label>
+      <input type="text" id="email" required>
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" required>
+
+      <button type="submit">Store</button>
+    </form>
+    <p id="store-message"></p>
+  </div>
+
+  <script>
+    document.getElementById('store-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const description = document.getElementById('description').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      // Simulate saving data to localStorage or backend
+      const data = JSON.parse(localStorage.getItem('passwords')) || [];
+      data.push({ description, email, password });
+      localStorage.setItem('passwords', JSON.stringify(data));
+
+      document.getElementById('store-message').innerText = 'Password stored successfully!';
+      document.getElementById('store-form').reset();
+    });
+  </script>
+</body>
+</html>
