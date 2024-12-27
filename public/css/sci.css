@@ -1,0 +1,146 @@
+#calinfoout{background-color:#EEEEEE;width:258px;}
+.calinfoinner{padding:5px;border-top:1px solid #262626;border-left:1px solid #262626;border-right:2px outset #262626;border-bottom:2px outset #262626;}
+#calinfoout input{width:45px;height:30px;margin:2px;background-color:#FFF;font-family:arial,helvetica,sans-serif;font-size: 17px;border:1px solid #262626;}
+#calinfoout #calInfoOutPut{width:242px;font-size:22px;padding:3px;cursor:text;text-align: right;background-color:#B8C6A3;color:#000000;}
+#calinfoout .calinfonm{color:#FFF;font-weight:bold;background-color:#262626;}
+#calinfoout .calinfoop{color:#262626;font-weight:bold;background-color:#cccccc;}
+#calinfoout .calinfoeq{color:#FF0000;font-weight:bold;background-color:#DCADB0;}
+#calinfoout .calinfofunc{color:#185290;font-weight:bold;background-color:#C8D8E8;height:23px;padding-bottom:1px;}
+
+
+#sciout{
+	padding:5px;
+	border-top:1px solid #262626;
+	border-left:1px solid #262626;
+	border-right:2px outset #262626;
+	border-bottom:2px outset #262626;
+	background: #fff;
+}
+#sciOutPut{
+	font-size:20px;
+	padding:3px;
+	margin:2px;
+	cursor:text;
+	text-align:right;
+	background-color:#336699;
+	border:1px solid #336699;
+	border-radius: 0px;
+	color:#fff;
+}
+.scifunc{
+	display: inline-block;
+	display: table-cell;
+	vertical-align: middle;
+	text-align:center;
+	width:50px;
+	height:30px;
+	margin:1px;
+	border:1px solid #a2bbd4;
+	border-radius: 3px;
+	font-family:arial,helvetica,sans-serif;
+	font-size:16px;
+	font-weight:bold;
+	color:#000;
+	background-color:#e5ecf3;
+}
+.scifunc:active {
+	background-color:#000;
+	color:#ffffff;
+}
+.scinm{
+	display: inline-block;
+	display: table-cell;
+	vertical-align: middle;
+	padding: 0px;
+	text-align:center;
+	width:50px;
+	height:30px;
+	margin:1px;
+	border:1px solid #336699;
+	border-radius: 3px;
+	font-family:arial,helvetica,sans-serif;
+	font-size:16px;
+	font-weight:bold;
+	color:#000;
+	background-color:#aec0d3;
+}
+.scinm:active {
+	background-color:#aaaaaa;
+	color:#000000;
+}
+.sciop{
+	display: inline-block;
+	display: table-cell;
+	vertical-align: middle;
+	padding: 0px;
+	text-align:center;
+	width:50px;
+	height:30px;
+	margin:1px;
+	border:1px solid #a2bbd4;
+	border-radius: 3px;
+	font-family:arial,helvetica,sans-serif;
+	font-size:16px;
+	font-weight:bold;
+	color:#000;
+	background-color:#e5ecf3;
+}
+.sciop:active {
+	background-color:#000000;
+	color:#ffffff;
+}
+.scird{
+	display: inline-block;
+	display: table-cell;
+	vertical-align: middle;
+	text-align:center;
+	height:30px;
+	margin:1px;
+	border:1px solid #eeeeee;
+	border-radius: 3px;
+	font-family:arial,helvetica,sans-serif;
+	font-size:13px;
+	color:#262626;
+}
+.scieq{
+	display: inline-block;
+	display: table-cell;
+	vertical-align: middle;
+	padding: 0px;
+	text-align:center;
+	width:50px;
+	height:30px;
+	margin:1px;
+	border:1px solid #336699;
+	border-radius: 3px;
+	font-family:arial,helvetica,sans-serif;
+	font-size:16px;
+	font-weight:bold;
+	color:#000;
+	background-color:#aec0d3;
+}
+.scieq:active {
+	background-color:#ff0000;
+	color:#ffffff;
+}
+
+#scihistory, #scihistory div{
+	font-size:13px;
+	color:#888;
+	text-align:right;
+	overflow: hidden;
+	width:268px;
+}
+#sciInPut{
+	font-size:18px;
+	color:#000;
+	text-align:right;
+	overflow: hidden;
+	width:268px;
+	word-wrap: break-word;
+	margin-bottom:-2px;
+}
+#sciInPut b{
+	color:#ccc;
+	font-weight:bold;
+}

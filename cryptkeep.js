@@ -180,10 +180,16 @@ app.post('/authenticate-faceid', async (req, res) => {
 });
 
 // Serve Frontend
+// Serve Frontend - Calc Page on Root
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  // Serve calc.html as the homepage
+  res.sendFile(path.join(__dirname, 'public', 'calc.html'));
 });
 
+// Serve index.html when the link is clicked from calc.html
+app.get('/indexx.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'indexx.html'));
+});
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });

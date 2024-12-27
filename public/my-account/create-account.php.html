@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Create an Account</title>
+	<meta name="description" content="" />
+	<link rel="stylesheet" href="../style.css" /><script src="https://d26tpo4cm8sb6k.cloudfront.net/js/common.js" async></script><meta name="viewport" content="width=device-width, initial-scale=1.0">	<link rel="apple-touch-icon" sizes="180x180" href="https://d26tpo4cm8sb6k.cloudfront.net/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="https://d26tpo4cm8sb6k.cloudfront.net/icon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="https://d26tpo4cm8sb6k.cloudfront.net/icon-16x16.png">
+	<link rel="manifest" href="../manifest.json"></head>
+<body>
+<div id="headerout">
+	<div id="header">
+		<div id="logo"><a href="../index.html"><img src="https://d26tpo4cm8sb6k.cloudfront.net/img/svg/calculator-white.svg" width="208" height="22" alt="Calculator.net"></a></div>
+		<div id="login"><a href="sign-in.php.html">sign in</a></div>	</div>
+</div>
+<div id="clear"></div><div id="contentout"><div id="content">
+<div class="smalltext"><a href="../index.html">home</a> / <a href="create-account.php.html">sign up</a></div>
+
+<h1>Create an Account</h1><p>Please complete the form below to become a member of Calculator.net.</p><div class="clefthalf">
+	<div class="panel"><form name="rF" method="post">
+	<table cellpadding="2">
+		<tr>
+			<td>
+				<div class="inputLabel">Name:</div>
+				<input name="name" maxlength="100" class="infull" type="text" value="">			</td>
+		</tr>
+		<tr>
+			<td>
+				<div class="inputLabel">Email: (User Name)</div>
+				<input name="email" maxlength="100" class="infull" type="text" value="">			</td>
+		</tr>
+		<tr>
+			<td>
+				<div class="inputLabel">Password:</div>
+				<input name="password" maxlength="100" class="infull" type="password" value=""><br><span class="smalltext">Min 8, Max 100 characters.</span>			</td>
+		</tr>
+		<tr>
+			<td>
+				<div class="inputLabel">Retype Password:</div>
+				<input name="password2" maxlength="100" class="infull" type="password" value="">			</td>
+		</tr>
+			<tr>
+			<td>
+				<div class="inputLabel">Confirmation Code:</div>
+				<input name="code" maxlength="6" class="inhalf" type="text" value=""> <img src="../img/dynamic/dynamicimg.php" width="98" height="26" align="absmiddle"><br><span class="smalltext">Please type in the characters in the green image.</span>			</td>
+		</tr>
+			<tr>
+			<td>
+							<p><label for="agreeterm"><input name="agreeterm" type="checkbox" id="agreeterm" value="1">I have read and agree to the <a href="../about-us.html#terms">Terms of Use</a>.</label></p>
+						</td>
+		</tr>
+		<tr>
+			<td>
+				<p><input type="submit" name="submit" value="Register" onClick="return vTerm();"> <input type="reset" name="reset" value="Reset"></p>
+			</td>
+		</tr>
+	</table>
+	</form></div>
+</div>
+<div class="crighthalf">
+<style>
+.oauth-btn {display: flex;margin:3px 0px;align-items: center;text-decoration: none;font-size: 16px;overflow: hidden;border: 1px solid #044284;border-radius: 5px;background-color: #fff;cursor: pointer;}
+.oauth-btn .oauth-icon {display: inline-flex;height: 100%;padding: 8px 8px;align-items: center;justify-content: center;background-color: #ddd;margin-right: 12px;}
+.oauth-btn:hover {background-color: #eee;}
+.oauth-btn:hover .oauth-icon {background-color: #ccc;}
+.oauth-or {
+   text-align: center;
+   border-bottom: 1px solid #ddd;
+   line-height: 0.1em;
+   margin: 16px 0 16px 0;
+}
+.oauth-or span {
+	font-size: 25px;
+    background:#fff;
+    padding:0 16px;
+}
+</style>
+<div class="oauth-or"><span>or</span></div>
+<a href="google-signup.php.html" class="oauth-btn">
+	<span class="oauth-icon"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" xmlns:xlink="http://www.w3.org/1999/xlink" width="20px" height="20px"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg></span>
+	Sign up with Google
+</a>
+<h3>Why register with calculator.net?</h3>
+<ul>
+	<li>Save calculations and access them later from anywhere.</li>
+	<li>Customize some units and settings</li>
+	<li>Membership is free</li>
+	<li>Your email will not be shared, and we will not send you any promotional messages or spam. It will only be used for password recovery purposes.</li>
+</ul>
+</div>
+<div id="clear"></div>
+
+
+
+
+
+
+
+</div>
+	<div id="right">
+		<div style="padding-top:10px;  min-height:280px; text-align:center;">
+<script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+<script>
+  window.googletag = window.googletag || {cmd: []};
+  googletag.cmd.push(function() {
+	googletag.defineSlot('/1057446/Calculator-Top-Right-Desktop', [[300, 250], [336, 280]], 'div-gpt-ad-1589567013929-0').addService(googletag.pubads());
+	googletag.pubads().enableSingleRequest();
+	googletag.enableServices();
+  });
+</script>
+<!-- /1057446/Calculator-Top-Right-Desktop -->
+<div id='div-gpt-ad-1589567013929-0'>
+  <script>
+    googletag.cmd.push(function() { googletag.display('div-gpt-ad-1589567013929-0'); });
+  </script>
+</div>
+</div>
+<form name="calcSearchForm" onsubmit="calcSearch(); return false;" autocomplete="off"><table align="center" id="searchbox"><tr><td><input type="text" name="calcSearchTerm" id="calcSearchTerm" class="inlongest" onkeyup="return calcSearch();"></td><td><span id="bluebtn" onClick="return calcSearch();">Search</span></td></tr><tr><td colspan="2"><div id="calcSearchOut"></div></td></tr></table></form>	</div>
+</div>
+<div id="clear"></div>
+<div id="footer"><div id="footerin"><div id="footernav"><a href="../about-us.html">about us</a> | <a href="../sitemap.html">sitemap</a> | <a href="../about-us.html#terms">terms of use</a> | <a href="../about-us.html#privacy">privacy policy</a> &nbsp;  &copy; 2008 - 2024 <a href="../index.html">calculator.net</a></div></div></div>
+</body>
+</html>
