@@ -203,22 +203,9 @@
         suggestionBox.style.display = 'none'; // Hide suggestion if the password is strong
       }
     });
+    
 
-    // Event listener for form submission
-    document.getElementById('store-form').addEventListener('submit', function(event) {
-      event.preventDefault();
-      const description = document.getElementById('description').value;
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-
-      // Simulate saving data to localStorage or backend
-      const data = JSON.parse(localStorage.getItem('passwords')) || [];
-      data.push({ description, email, password });
-      localStorage.setItem('passwords', JSON.stringify(data));
-
-      document.getElementById('store-message').innerText = 'Password stored successfully!';
-      document.getElementById('store-form').reset();
-    });
-  </script>
+    </script>
+    <script src="script.js"></script>
 </body>
 </html>

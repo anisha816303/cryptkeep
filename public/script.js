@@ -94,61 +94,73 @@ document.addEventListener('DOMContentLoaded', () => {
   });
  });
 
+ document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('store-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+  
+    const username = Cookies.get('username'); // Retrieve username from cookies
+    const description = document.getElementById('description').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+  
+    try {
+      const response = await fetch(`${apiUrl}/store`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          data: { description, email, password },
+        }),
+      });
+  
+      if (response.ok) {
+        alert('Password stored successfully in vault!');
+        document.getElementById('store-form').reset(); // Clear form inputs
+      } else {
+        const result = await response.json();
+        alert(result.message || 'Error storing password');
+      }
+    } catch (error) {
+      alert('Error connecting to server. Please try again.');
+      console.error('Error:', error);
+    }
+  });
+  
+ });
 
- document.getElementById('store-form')?.addEventListener('submit', async (e) => {
-  e.preventDefault();
 
+ document.getElementById('search-btn')?.addEventListener('click', async () => {
   const username = Cookies.get('username'); // Retrieve username from cookies
-  const masterPassword = document.getElementById('masterPassword').value;
-  const description = document.getElementById('description').value;
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
 
-  const response = await fetch(`${apiUrl}/store`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      username,
-      password: masterPassword,
-      data: { description, email, password }
-    }),
-  });
-
-  if (response.ok) {
-    alert('Password stored successfully in vault!');
-  } else {
-    const result = await response.json();
-    alert(result.message || 'Error storing password');
-  }
-});
-
-document.getElementById('search-btn')?.addEventListener('click', async () => {
-  const username = Cookies.get('username');
-  const masterPassword = document.getElementById('masterPassword').value;
-  const search = document.getElementById('search').value;
-
-  const response = await fetch(`${apiUrl}/retrieve`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password: masterPassword }),
-  });
-
-  if (response.ok) {
-    const result = await response.json();
-    const filteredResults = result.filter(entry => entry.description.includes(search));
-
-    const resultsList = document.getElementById('results');
-    resultsList.innerHTML = ''; // Clear previous results
-    filteredResults.forEach(entry => {
-      const li = document.createElement('li');
-      li.textContent = `${entry.description} - ${entry.email} - ${entry.password}`;
-      resultsList.appendChild(li);
+  try {
+    const response = await fetch(`${apiUrl}/retrieve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
     });
-  } else {
-    const result = await response.json();
-    alert(result.message || 'Error retrieving passwords');
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Retrieved Data:', data);
+
+      // Display retrieved data
+      const resultsList = document.getElementById('results');
+      resultsList.innerHTML = ''; // Clear previous results
+      data.forEach((entry) => {
+        const li = document.createElement('li');
+        li.textContent = `${entry.description} - ${entry.email} - ${entry.password}`;
+        resultsList.appendChild(li);
+      });
+    } else {
+      const result = await response.json();
+      alert(result.message || 'Error retrieving data');
+    }
+  } catch (error) {
+    alert('Error connecting to server. Please try again.');
+    console.error('Error:', error);
   }
 });
+
 
 
 

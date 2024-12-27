@@ -15,29 +15,6 @@
     <ul id="results"></ul>
   </div>
 
-  <script>
-    const searchInput = document.getElementById('search');
-    const resultsList = document.getElementById('results');
-
-    // Simulate fetching data from localStorage
-    const passwords = JSON.parse(localStorage.getItem('passwords')) || [];
-
-    searchInput.addEventListener('input', function() {
-      const query = searchInput.value.toLowerCase();
-      resultsList.innerHTML = ''; // Clear previous results
-
-      if (query) {
-        const filteredPasswords = passwords.filter(item =>
-          item.description.toLowerCase().includes(query) || item.email.toLowerCase().includes(query)
-        );
-
-        filteredPasswords.forEach(item => {
-          const li = document.createElement('li');
-          li.textContent = `Description: ${item.description}, Email/Link: ${item.email}, Password: ${item.password}`;
-          resultsList.appendChild(li);
-        });
-      }
-    });
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>

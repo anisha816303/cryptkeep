@@ -18,7 +18,7 @@ app.get('/favicon.ico', (req, res) => res.status(204));
 
 
 // MongoDB connection URI
-const uri = 'mongodb+srv://anishaajit816:3JevU00J9Mr7XnrL@cryptkeepcluster.grvfy.mongodb.net/?retryWrites=true&w=majority&appName=cryptkeepcluster';
+const uri = 'mongodb+srv://anishaajit816:3JevU00J9Mr7XnrL@cryptkeepcluster.grvfy.mongodb.net/test?retryWrites=true&w=majority&appName=cryptkeepcluster';
 
 // Connect to MongoDB using Mongoose
 mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -46,88 +46,82 @@ const vaultSchema = new mongoose.Schema({
 
 const Vault = mongoose.model('Vault', vaultSchema);
 
-// Function to generate a secure key using PBKDF2
-const generateKey = (password, salt) => {
-  return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256');
-};
+// const crypto = require('crypto');
 
-// Function to encrypt data
-const encryptData = (data, password) => {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const key = generateKey(password, salt);
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+// Secure key for encryption, generated once and used consistently
+const ENCRYPTION_KEY = crypto.randomBytes(32); // Replace with a securely stored key in production
+
+const encryptData = (data) => {
+  const iv = crypto.randomBytes(16); // Random initialization vector
+  const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
   const encryptedData = Buffer.concat([cipher.update(JSON.stringify(data)), cipher.final()]);
-  
+
   return {
-    salt,
     iv: iv.toString('hex'),
-    encryptedVault: encryptedData.toString('hex')
+    encryptedVault: encryptedData.toString('hex'),
   };
 };
 
-// Function to decrypt data
-const decryptData = (encryptedData, password, salt, iv) => {
-  const key = generateKey(password, salt);
-  const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'hex'));
+const decryptData = (encryptedData, iv) => {
+  const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, Buffer.from(iv, 'hex'));
   const decryptedData = Buffer.concat([decipher.update(Buffer.from(encryptedData, 'hex')), decipher.final()]);
   return JSON.parse(decryptedData.toString());
 };
 
+// Store endpoint
 app.post('/store', async (req, res) => {
-  const { username, data, password } = req.body;
+  const { username, data } = req.body;
 
   // Validate inputs
-  if (!username || !data || !password || !validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
+  if (!username || !data) {
+    return res.status(400).json({ message: 'Invalid input' });
   }
 
   try {
-    // Encrypt data with the master password
-    const { salt, iv, encryptedVault } = encryptData(data, password);
+    const { iv, encryptedVault } = encryptData(data);
 
     // Check if a vault exists for the user
     let vault = await Vault.findOne({ username });
     if (vault) {
-      // Update existing vault
       vault.encryptedVault = encryptedVault;
-      vault.salt = salt;
       vault.iv = iv;
     } else {
-      // Create a new vault
-      vault = new Vault({ username, encryptedVault, salt, iv });
+      vault = new Vault({ username, encryptedVault, iv });
     }
 
     await vault.save();
-    res.status(200).send('Data stored successfully in vault');
+    res.status(200).json({ message: 'Data stored successfully in vault' });
   } catch (err) {
-    res.status(500).send('Error storing data: ' + err.message);
+    console.error('Error storing data:', err.message);
+    res.status(500).json({ message: 'Error storing data: ' + err.message });
   }
 });
 
 
 app.post('/retrieve', async (req, res) => {
-  const { username, password } = req.body;
+  const { username } = req.body;
 
-  // Validate inputs
-  if (!username || !password || !validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
+  // Validate input
+  if (!username) {
+    return res.status(400).json({ message: 'Invalid input' });
   }
 
   try {
-    // Find the vault
+    // Find the user's vault in the database
     const vault = await Vault.findOne({ username });
     if (!vault) {
-      return res.status(404).send('Vault not found');
+      return res.status(404).json({ message: 'Vault not found' });
     }
 
     // Decrypt the vault data
-    const decryptedData = decryptData(vault.encryptedVault, password, vault.salt, vault.iv);
+    const decryptedData = decryptData(vault.encryptedVault, vault.iv);
     res.status(200).json(decryptedData);
   } catch (err) {
-    res.status(500).send('Error retrieving data: ' + err.message);
+    console.error('Error retrieving data:', err.message);
+    res.status(500).json({ message: 'Error retrieving data: ' + err.message });
   }
 });
+
 
 
 // Function to register a new user
