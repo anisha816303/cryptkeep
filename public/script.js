@@ -99,10 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
   
     const username = Cookies.get('username'); // Retrieve username from cookies
+    console.log(username);
     const description = document.getElementById('description').value;
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
-  
+    console.log('Storing password:', { username, description, email, password });
     try {
       const response = await fetch(`${apiUrl}/store`, {
         method: 'POST',
@@ -141,16 +142,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (response.ok) {
       const data = await response.json();
-      console.log('Retrieved Data:', data);
+      console.log('Retrieved Data:', data); // Log the raw response data
 
-      // Display retrieved data
-      const resultsList = document.getElementById('results');
-      resultsList.innerHTML = ''; // Clear previous results
-      data.forEach((entry) => {
+      // Check if data is an object and contains the necessary properties
+      if (data && typeof data === 'object') {
+        // Display the data
+        const resultsList = document.getElementById('results');
+        resultsList.innerHTML = ''; // Clear previous results
+
         const li = document.createElement('li');
-        li.textContent = `${entry.description} - ${entry.email} - ${entry.password}`;
+        li.textContent = `${data.description} - ${data.email} - ${data.password}`;
         resultsList.appendChild(li);
-      });
+      } else {
+        alert('Unexpected data format received from the server.');
+      }
     } else {
       const result = await response.json();
       alert(result.message || 'Error retrieving data');
@@ -160,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Error:', error);
   }
 });
-
 
 
 

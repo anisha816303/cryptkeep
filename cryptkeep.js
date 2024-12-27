@@ -49,11 +49,16 @@ const Vault = mongoose.model('Vault', vaultSchema);
 // const crypto = require('crypto');
 
 // Secure key for encryption, generated once and used consistently
-const ENCRYPTION_KEY = crypto.randomBytes(32); // Replace with a securely stored key in production
+const generateKey = (username, salt) => {
+  // Derive key from username and salt using PBKDF2
+  return crypto.pbkdf2Sync(username, salt, 100000, 32, 'sha256');
+};
 
-const encryptData = (data) => {
+// Function to encrypt data
+const encryptData = (data, username, salt) => {
   const iv = crypto.randomBytes(16); // Random initialization vector
-  const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+  const key = generateKey(username, salt); // Generate the encryption key using username and salt
+  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
   const encryptedData = Buffer.concat([cipher.update(JSON.stringify(data)), cipher.final()]);
 
   return {
@@ -62,8 +67,10 @@ const encryptData = (data) => {
   };
 };
 
-const decryptData = (encryptedData, iv) => {
-  const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, Buffer.from(iv, 'hex'));
+// Function to decrypt data
+const decryptData = (encryptedData, iv, username, salt) => {
+  const key = generateKey(username, salt); // Regenerate the key using username and salt
+  const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'hex'));
   const decryptedData = Buffer.concat([decipher.update(Buffer.from(encryptedData, 'hex')), decipher.final()]);
   return JSON.parse(decryptedData.toString());
 };
@@ -78,15 +85,17 @@ app.post('/store', async (req, res) => {
   }
 
   try {
-    const { iv, encryptedVault } = encryptData(data);
+    const salt = crypto.randomBytes(16).toString('hex'); // Generate a new salt for each user
+    const { iv, encryptedVault } = encryptData(data, username, salt);
 
     // Check if a vault exists for the user
     let vault = await Vault.findOne({ username });
     if (vault) {
       vault.encryptedVault = encryptedVault;
       vault.iv = iv;
+      vault.salt = salt; // Store the salt
     } else {
-      vault = new Vault({ username, encryptedVault, iv });
+      vault = new Vault({ username, encryptedVault, iv, salt });
     }
 
     await vault.save();
@@ -97,7 +106,7 @@ app.post('/store', async (req, res) => {
   }
 });
 
-
+// Retrieve endpoint
 app.post('/retrieve', async (req, res) => {
   const { username } = req.body;
 
@@ -113,8 +122,8 @@ app.post('/retrieve', async (req, res) => {
       return res.status(404).json({ message: 'Vault not found' });
     }
 
-    // Decrypt the vault data
-    const decryptedData = decryptData(vault.encryptedVault, vault.iv);
+    // Decrypt the vault data using the stored salt and username
+    const decryptedData = decryptData(vault.encryptedVault, vault.iv, username, vault.salt);
     res.status(200).json(decryptedData);
   } catch (err) {
     console.error('Error retrieving data:', err.message);
@@ -174,7 +183,7 @@ app.post('/login', async (req, res) => {
     await authenticateUser(username, password);
     
     // Set the username in a cookie (expires in 1 hour)
-    res.cookie('username', username, { maxAge: 3600000, httpOnly: true }); // Cookie expires in 1 hour
+    res.cookie('username', username, { maxAge: 3600000 }); // Cookie expires in 1 hour
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ success: false, message: 'Error logging in: ' + err.message });
@@ -223,7 +232,7 @@ app.post('/api/authenticate-faceid', async (req, res) => {
     // If authentication is successful
     if (isAuthenticated) {
       // Set the username in a cookie (expires in 1 hour)
-      res.cookie('username', username, { maxAge: 3600000, httpOnly: true }); // Cookie expires in 1 hour
+      res.cookie('username', username, { maxAge: 3600000 }); // Cookie expires in 1 hour
       res.json({ success: true, message: 'Authentication successful!' });
     } else {
       // If authentication fails, send a 401 Unauthorized status
@@ -246,8 +255,8 @@ app.get('/', (req, res) => {
 });
 
 // Serve index.html when the link is clicked from calc.html
-app.get('/indexx.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'indexx.html'));
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'register.html'));
