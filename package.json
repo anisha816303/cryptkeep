@@ -10,9 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "crypto": "^1.0.1",
     "express": "^4.21.2",
     "face-api.js": "^0.22.2",
+    "js-cookie": "^3.0.5",
     "mongoose": "^8.9.2",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",

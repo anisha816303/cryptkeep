@@ -7,10 +7,15 @@ const validator = require('validator');
 const faceapi = require('face-api.js');
 const app = express();
 const PORT = 4000;
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/favicon.ico', (req, res) => res.status(204));
+
 
 // MongoDB connection URI
 const uri = 'mongodb+srv://anishaajit816:3JevU00J9Mr7XnrL@cryptkeepcluster.grvfy.mongodb.net/?retryWrites=true&w=majority&appName=cryptkeepcluster';
@@ -30,39 +35,100 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model('User', userSchema);
 
+
+// Define Vault schema and model
+const vaultSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  encryptedVault: { type: String, required: true },
+  salt: { type: String, required: true },
+  iv: { type: String, required: true }
+});
+
+const Vault = mongoose.model('Vault', vaultSchema);
+
 // Function to generate a secure key using PBKDF2
 const generateKey = (password, salt) => {
   return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256');
 };
 
-// Function to encrypt and store data locally
-const storeEncryptedData = (filePath, data, password) => {
-  const salt = crypto.randomBytes(16).toString('hex'); // Generate random salt
+// Function to encrypt data
+const encryptData = (data, password) => {
+  const salt = crypto.randomBytes(16).toString('hex');
   const key = generateKey(password, salt);
-  const iv = crypto.randomBytes(16); // Random initialization vector
-
+  const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
   const encryptedData = Buffer.concat([cipher.update(JSON.stringify(data)), cipher.final()]);
-
-  const fileContent = {
+  
+  return {
     salt,
     iv: iv.toString('hex'),
-    data: encryptedData.toString('hex'),
+    encryptedVault: encryptedData.toString('hex')
   };
-
-  fs.writeFileSync(filePath, JSON.stringify(fileContent));
-  console.log('Data encrypted and stored locally');
 };
 
-// Function to decrypt and retrieve data from a local file
-const retrieveDecryptedData = (filePath, password) => {
-  const fileContent = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  const { salt, iv, data } = fileContent;
+// Function to decrypt data
+const decryptData = (encryptedData, password, salt, iv) => {
   const key = generateKey(password, salt);
   const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'hex'));
-  const decryptedData = Buffer.concat([decipher.update(Buffer.from(data, 'hex')), decipher.final()]);
+  const decryptedData = Buffer.concat([decipher.update(Buffer.from(encryptedData, 'hex')), decipher.final()]);
   return JSON.parse(decryptedData.toString());
 };
+
+app.post('/store', async (req, res) => {
+  const { username, data, password } = req.body;
+
+  // Validate inputs
+  if (!username || !data || !password || !validator.isLength(password, { min: 8 })) {
+    return res.status(400).send('Invalid input');
+  }
+
+  try {
+    // Encrypt data with the master password
+    const { salt, iv, encryptedVault } = encryptData(data, password);
+
+    // Check if a vault exists for the user
+    let vault = await Vault.findOne({ username });
+    if (vault) {
+      // Update existing vault
+      vault.encryptedVault = encryptedVault;
+      vault.salt = salt;
+      vault.iv = iv;
+    } else {
+      // Create a new vault
+      vault = new Vault({ username, encryptedVault, salt, iv });
+    }
+
+    await vault.save();
+    res.status(200).send('Data stored successfully in vault');
+  } catch (err) {
+    res.status(500).send('Error storing data: ' + err.message);
+  }
+});
+
+
+app.post('/retrieve', async (req, res) => {
+  const { username, password } = req.body;
+
+  // Validate inputs
+  if (!username || !password || !validator.isLength(password, { min: 8 })) {
+    return res.status(400).send('Invalid input');
+  }
+
+  try {
+    // Find the vault
+    const vault = await Vault.findOne({ username });
+    if (!vault) {
+      return res.status(404).send('Vault not found');
+    }
+
+    // Decrypt the vault data
+    const decryptedData = decryptData(vault.encryptedVault, password, vault.salt, vault.iv);
+    res.status(200).json(decryptedData);
+  } catch (err) {
+    res.status(500).send('Error retrieving data: ' + err.message);
+  }
+});
+
 
 // Function to register a new user
 const registerUser = async (username, password) => {
@@ -94,49 +160,34 @@ app.post('/register', async (req, res) => {
   }
   try {
     await registerUser(username, password);
-    res.send('User registered successfully');
+    res.status(200).json({message:'User registered successfully'});
   } catch (err) {
-    res.status(400).send('Error registering user: ' + err.message);
+    res.status(400).json({message:'Error registering user: ' + err.message});
   }
 });
 
 // Login endpoint
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
+  
+  // Validate input
   if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 })) {
     return res.status(400).send('Invalid input');
   }
+
   try {
+    // Attempt user authentication (you would need to implement authenticateUser function)
     await authenticateUser(username, password);
+    
+    // Set the username in a cookie (expires in 1 hour)
+    res.cookie('username', username, { maxAge: 3600000, httpOnly: true }); // Cookie expires in 1 hour
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ success: false, message: 'Error logging in: ' + err.message });
   }
 });
 
-// Store endpoint
-app.post('/store', (req, res) => {
-  const { filePath, data, password } = req.body;
-  if (!validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
-  }
-  storeEncryptedData(filePath, data, password);
-  res.send('Data stored successfully');
-});
 
-// Retrieve endpoint
-app.post('/retrieve', (req, res) => {
-  const { filePath, password } = req.body;
-  if (!validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
-  }
-  try {
-    const data = retrieveDecryptedData(filePath, password);
-    res.json(data);
-  } catch (err) {
-    res.status(400).send('Error retrieving data: ' + err.message);
-  }
-});
 
 // Face ID registration endpoint
 app.post('/api/register-faceid', async (req, res) => {
@@ -144,7 +195,7 @@ app.post('/api/register-faceid', async (req, res) => {
   try {
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(400).send('User not found');
+      return res.status(400).json({message:'User not found'});
     }
     user.descriptors.push(...descriptors);
     await user.save();
@@ -155,29 +206,43 @@ app.post('/api/register-faceid', async (req, res) => {
 });
 
 // Face ID authentication endpoint
-app.post('/authenticate-faceid', async (req, res) => {
+app.post('/api/authenticate-faceid', async (req, res) => {
   const { username, descriptors } = req.body;
+
   try {
+    // Find user by username
     const user = await User.findOne({ username });
+
+    // If user is not found, return a 400 response
     if (!user) {
-      return res.status(400).send('User not found');
+      return res.status(400).json({ success: false, message: 'User not found' });
     }
 
+    // Authenticate user by comparing descriptors using face-api.js
     const isAuthenticated = user.descriptors.some(storedDescriptor => {
       return descriptors.some(descriptor => {
+        // Check if any of the provided descriptors matches the stored ones
         return faceapi.euclideanDistance(storedDescriptor, descriptor) < 0.6;
       });
     });
 
+    // If authentication is successful
     if (isAuthenticated) {
-      res.json({ message: 'Authentication successful!' });
+      // Set the username in a cookie (expires in 1 hour)
+      res.cookie('username', username, { maxAge: 3600000, httpOnly: true }); // Cookie expires in 1 hour
+      res.json({ success: true, message: 'Authentication successful!' });
     } else {
-      res.status(400).json({ message: 'Authentication failed.' });
+      // If authentication fails, send a 401 Unauthorized status
+      res.status(401).json({ success: false, message: 'Authentication failed.' });
     }
+
   } catch (err) {
-    res.status(400).send('Error authenticating Face ID: ' + err.message);
+    // Handle any errors during the process
+    res.status(500).json({ success: false, message: 'Error authenticating Face ID: ' + err.message });
   }
 });
+
+
 
 // Serve Frontend
 app.get('/', (req, res) => {

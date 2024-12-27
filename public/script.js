@@ -1,5 +1,6 @@
 const apiUrl = 'http://localhost:4000';
-//const registerForm=document.getElementById('register-form');
+
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Ensure face-api.js is loaded
   if (typeof faceapi === 'undefined') {
@@ -85,57 +86,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Assuming the response is a JSON object
     const result = await response.json();
-
-    // Show registration result message
-    if (response.ok) {
-      document.getElementById('register-message').innerText = 'Registration successful!';
-      document.getElementById('register-message').style.color = 'green';
+    if (response.ok){
+      alert(result.message);
     } else {
-      document.getElementById('register-message').innerText = result.message || 'An error occurred during registration.';
-      document.getElementById('register-message').style.color = 'red';
+      alert(result.message || 'An error occurred during registration.');
     }
   });
  });
 
 
-// Store password form handler
-document.getElementById('store-form')?.addEventListener('submit', async (e) => {
+ document.getElementById('store-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const masterPassword = localStorage.getItem('masterPassword');
+
+  const username = Cookies.get('username'); // Retrieve username from cookies
+  const masterPassword = document.getElementById('masterPassword').value;
   const description = document.getElementById('description').value;
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
+
   const response = await fetch(`${apiUrl}/store`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ masterPassword, description, email, password }),
+    body: JSON.stringify({ 
+      username,
+      password: masterPassword,
+      data: { description, email, password }
+    }),
   });
-  const result = await response.json();
+
   if (response.ok) {
-    alert('Password stored successfully!');
+    alert('Password stored successfully in vault!');
   } else {
-    alert(result.message);
+    const result = await response.json();
+    alert(result.message || 'Error storing password');
   }
 });
 
-// Search handler
 document.getElementById('search-btn')?.addEventListener('click', async () => {
-  const masterPassword = localStorage.getItem('masterPassword');
+  const username = Cookies.get('username');
+  const masterPassword = document.getElementById('masterPassword').value;
   const search = document.getElementById('search').value;
-  const response = await fetch(`${apiUrl}/retrieve?masterPassword=${encodeURIComponent(masterPassword)}&search=${encodeURIComponent(search)}`);
-  const result = await response.json();
-  const resultsList = document.getElementById('results');
-  resultsList.innerHTML = '';
+
+  const response = await fetch(`${apiUrl}/retrieve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password: masterPassword }),
+  });
+
   if (response.ok) {
-    result.results.forEach(entry => {
+    const result = await response.json();
+    const filteredResults = result.filter(entry => entry.description.includes(search));
+
+    const resultsList = document.getElementById('results');
+    resultsList.innerHTML = ''; // Clear previous results
+    filteredResults.forEach(entry => {
       const li = document.createElement('li');
       li.textContent = `${entry.description} - ${entry.email} - ${entry.password}`;
       resultsList.appendChild(li);
     });
   } else {
-    resultsList.innerHTML = `<li>${result.message}</li>`;
+    const result = await response.json();
+    alert(result.message || 'Error retrieving passwords');
   }
 });
+
+
 
 // Function for Face ID registration
 async function registerWithFaceID(username) {
@@ -168,7 +183,7 @@ async function authenticateWithFaceID(username) {
     body: JSON.stringify({ username, descriptors: detections.map(d => d.descriptor) }),
   });
   const result = await response.json();
-  if (response.ok) {
+  if (result.success) {
     alert('Login successful with Face ID!');
     window.location.href = 'dashboard.html';
   } else {
@@ -176,14 +191,33 @@ async function authenticateWithFaceID(username) {
   }
 }
 
-// Event listener for Face ID registration button
-document.getElementById('register-faceid-btn')?.addEventListener('click', async () => {
+
+document.getElementById('register-faceid-btn')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const loadingSpinner = document.getElementById('loading-spinner');
   const username = prompt('Enter your username:');
-  await startCamera();
-  document.getElementById('capture-btn').style.display = 'block';
-  document.getElementById('capture-btn').addEventListener('click', async () => {
-    await registerWithFaceID(username);
-  });
+  loadingSpinner.style.display = 'flex'; // Show spinner
+
+  try {
+    const video = document.getElementById('video');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    video.play();
+    video.style.display = 'block'; 
+    loadingSpinner.style.display = 'flex'; // Hide spinner after starting camera
+    document.getElementById('capture-btn').style.display = 'block';
+
+    document.getElementById('capture-btn').addEventListener('click', async () => {
+      loadingSpinner.style.display = 'flex'; // Show spinner while capturing
+      await registerWithFaceID(username);
+      loadingSpinner.style.display = 'none'; // Hide spinner after capturing
+      alert('Face ID registration successful!');
+    });
+  } catch (error) {
+    console.error('Error accessing camera:', error);
+    loadingSpinner.style.display = 'none'; // Hide spinner on error
+    alert('Unable to access the camera.');
+  }
 });
 
 // Event listener for Face ID login button
@@ -201,9 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('masterPassword');
   const usernameFeedback = document.getElementById('username-feedback');
   const passwordFeedback = document.getElementById('password-feedback');
-  const registerForm = document.getElementById('register-form');
-  const registerFaceIdBtn = document.getElementById('register-faceid-btn');
-  const registerMessage = document.getElementById('register-message');
+  
 
   // Validate username and password
   usernameInput.addEventListener('input', () => {
@@ -230,33 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-//   // Handle form submission
-//   registerForm.addEventListener('submit', (event) => {
-//     event.preventDefault();
-
-//     const username = usernameInput.value;
-//     const password = passwordInput.value;
-
-//     if (!validator.isAlphanumeric(username)) {
-//       registerMessage.textContent = 'Error: Username must be alphanumeric.';
-//       registerMessage.classList.add('text-red-500');
-//       return;
-//     }
-
-//     if (!validator.isLength(password, { min: 8 })) {
-//       registerMessage.textContent = 'Error: Password must be at least 8 characters long.';
-//       registerMessage.classList.add('text-red-500');
-//       return;
-//     }
-
-//     // Simulate successful registration
-//     registerMessage.textContent = 'Registration successful!';
-//     registerMessage.classList.remove('text-red-500');
-//     registerMessage.classList.add('text-green-500');
-
-//     // Show "Register with Face ID" button
-//     registerFaceIdBtn.classList.remove('hidden');
-//   });
  });
 
 
