@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Calculator.net: Free Online Calculators - Math, Fitness, Finance, Science</title>
+	<meta name="description" content="Online calculator for quick calculations, along with a large collection of calculators on math, finance, fitness, and more, each with in-depth information." />
+	<link rel="stylesheet" href="style.css" /><script src="https://d26tpo4cm8sb6k.cloudfront.net/js/common.js" async></script><meta name="viewport" content="width=device-width, initial-scale=1.0">	<link rel="apple-touch-icon" sizes="180x180" href="https://d26tpo4cm8sb6k.cloudfront.net/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="https://d26tpo4cm8sb6k.cloudfront.net/icon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="https://d26tpo4cm8sb6k.cloudfront.net/icon-16x16.png">
+	<link rel="manifest" href="manifest.json"><link rel="stylesheet" href="css/sci.css" />	<script src="https://d26tpo4cm8sb6k.cloudfront.net/js/scientific3.js" async></script>
+	<meta name="google-site-verification" content="04Uv2RwlTLFxQszjq7hb0XQxTEZsl2lLmI5e1-TbcbA" />
+</head>
+<body>
+<div id="headerout">
+	<div id="header">
+		<div id="logo"><a href="index.html"><img src="https://d26tpo4cm8sb6k.cloudfront.net/img/svg/calculator-white.svg" width="208" height="22" alt="Calculator.net"></a></div>
+		<div id="login">
+            <a href="/indexx.html">Sign in</a>
+          </div>
+          
+</div>
+<div id="clear"></div><div id="homecaldiv">
+<style>
+#sciout{padding:5px;border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px outset #fff;border-bottom:1px outset #fff;background: #fff;}
+@media (max-width:720px){#homefunbtn{display:none;}}
+@media (max-width:650px){#homesch{display:none;}}
+</style>
+
+<div id="contentout">
+<table align="center" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td>
+	<table align="center" id="sciout" cellpadding="0" cellspacing="2">
+		<tr><td colspan="2">
+		<div>
+			<div id="sciInPut">&nbsp;</div>
+			<div id="sciOutPut">0</div>
+		</div>
+		</td></tr>
+		<tr><td>
+		<div style="padding-top:3px;width:100%;" id="homefunbtn">
+			<div><span onclick="r('sin')" class="scifunc">sin</span><span onclick="r('cos')" class="scifunc">cos</span><span onclick="r('tan')" class="scifunc">tan</span><span class="scird"><label for="scirdsettingd"><input id="scirdsettingd" type="radio" name="scirdsetting" value="deg" onClick="cnDegreeRadians='degree';" checked>Deg</label><label for="scirdsettingr"><input id="scirdsettingr" type="radio" name="scirdsetting" value="rad" onClick="cnDegreeRadians='radians';">Rad</label></span></div>
+			<div><span onclick="r('asin')" class="scifunc">sin<sup>-1</sup></span><span onclick="r('acos')" class="scifunc">cos<sup>-1</sup></span><span onclick="r('atan')" class="scifunc">tan<sup>-1</sup></span><span onclick="r('pi')" class="scifunc">&#960;</span><span onclick="r('e')" class="scifunc">e</span></div>
+			<div><span onclick="r('pow')" class="scifunc">x<sup>y</sup></span><span onclick="r('x3')" class="scifunc">x<sup>3</sup></span><span onclick="r('x2')" class="scifunc">x<sup>2</sup></span><span onclick="r('ex')" class="scifunc">e<sup>x</sup></span><span onclick="r('10x')" class="scifunc">10<sup>x</sup></span></div>
+			<div><span onclick="r('apow')" class="scifunc"><sup>y</sup>&#8730;x</span><span onclick="r('3x')" class="scifunc"><sup>3</sup>&#8730;x</span><span onclick="r('sqrt')" class="scifunc">&#8730;x</span><span onclick="r('ln')" class="scifunc">ln</span><span onclick="r('log')" class="scifunc">log</span></div>
+			<div><span onclick="r('(')" class="scifunc">(</span><span onclick="r(')')" class="scifunc">)</span><span onclick="r('1/x')" class="scifunc">1/x</span><span onclick="r('pc')" class="scifunc">%</span><span onclick="r('n!')" class="scifunc">n!</span></div>
+		</div>
+		</td><td>
+		<div style="padding-top:3px;">
+			<div><span onclick="r(7)" class="scinm">7</span><span onclick="r(8)" class="scinm">8</span><span onclick="r(9)" class="scinm">9</span><span onclick="r('+')" class="sciop">+</span><span onclick="r('bk')" class="sciop">Back</span></div>
+			<div><span onclick="r(4)" class="scinm">4</span><span onclick="r(5)" class="scinm">5</span><span onclick="r(6)" class="scinm">6</span><span onclick="r('-')" class="sciop">&ndash;</span><span onclick="r('ans')" class="sciop">Ans</span></div>
+			<div><span onclick="r(1)" class="scinm">1</span><span onclick="r(2)" class="scinm">2</span><span onclick="r(3)" class="scinm">3</span><span onclick="r('*')" class="sciop">&#215;</span><span onclick="r('M+')" class="sciop">M+</span></div>
+			<div><span onclick="r(0)" class="scinm">0</span><span onclick="r('.')" class="scinm">.</span><span onclick="r('EXP')" class="sciop">EXP</span><span onclick="r('/')" class="sciop">/</span><span onclick="r('M-')" class="sciop">M-</span></div>
+			<div><span onclick="r('+/-')" class="sciop">&#177;</span><span onclick="r('RND')" class="sciop">RND</span><span onclick="r('C')" class="scieq">AC</span><span onclick="r('=')" class="scieq">=</span><span onclick="r('MR')" class="sciop" id="scimrc">MR</span></div>
+		</div>
+	</td></tr>
+	<tr><td colspan="2"><div id="scihistory"></div></td></tr>
+	</table>
+</td><td valign="top" id="homesch">
+
+<style>
+#calcSearchOut div{padding: 0px;}
+</style>
+</td></tr></table>
+
+
+</div>
+<div id="footer"><div id="footerin">Calculator.net's sole focus is to provide fast, comprehensive, convenient, free online calculators in a plethora of areas. Currently, we have around 200 calculators to help you "do the math" quickly in areas such as finance, fitness, health, math, and others, and we are still developing more. Our goal is to become the one-stop, go-to site for people who need to make quick calculations. Additionally, we believe the internet should be a source of free information. Therefore, all of our tools and services are completely free, with no registration required.<br><br>We coded and developed each calculator individually and put each one through strict, comprehensive testing. However, please inform us if you notice even the slightest error &ndash; your input is extremely valuable to us. While most calculators on Calculator.net are designed to be universally applicable for worldwide usage, some are for specific countries only. For example, the <i>Income Tax Calculator</i> is for United States residents only.<br><br><div id="footernav"></div></div></div>
+</body>
+</html>
