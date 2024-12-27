@@ -70,31 +70,31 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   //Register form handler
-//   document.getElementById('register-form')?.addEventListener('submit', async (e) => {
-//     e.preventDefault();
+  document.getElementById('register-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-//     const username = document.getElementById('username').value;
-//     const masterPassword = document.getElementById('masterPassword').value;
+    const username = document.getElementById('username').value;
+    const masterPassword = document.getElementById('masterPassword').value;
 
-//     // Send registration request to the server
-//     const response = await fetch(`${apiUrl}/register`, {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({ username, password: masterPassword }),
-//     });
+    // Send registration request to the server
+    const response = await fetch(`${apiUrl}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password: masterPassword }),
+    });
 
-//     // Assuming the response is a JSON object
-//     const result = await response.json();
+    // Assuming the response is a JSON object
+    const result = await response.json();
 
-//     // Show registration result message
-//     if (response.ok) {
-//       document.getElementById('register-message').innerText = 'Registration successful!';
-//       document.getElementById('register-message').style.color = 'green';
-//     } else {
-//       document.getElementById('register-message').innerText = result.message || 'An error occurred during registration.';
-//       document.getElementById('register-message').style.color = 'red';
-//     }
-//   });
+    // Show registration result message
+    if (response.ok) {
+      document.getElementById('register-message').innerText = 'Registration successful!';
+      document.getElementById('register-message').style.color = 'green';
+    } else {
+      document.getElementById('register-message').innerText = result.message || 'An error occurred during registration.';
+      document.getElementById('register-message').style.color = 'red';
+    }
+  });
  });
 
 
@@ -145,7 +145,7 @@ async function registerWithFaceID(username) {
     alert('No face detected. Please try again.');
     return;
   }
-  const response = await fetch(`${apiUrl}/register-faceid`, {
+  const response = await fetch(`${apiUrl}/api/register-faceid`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, descriptors: detections.map(d => d.descriptor) }),
@@ -162,7 +162,7 @@ async function authenticateWithFaceID(username) {
     alert('No face detected. Please try again.');
     return;
   }
-  const response = await fetch(`${apiUrl}/authenticate-faceid`, {
+  const response = await fetch(`${apiUrl}/api/authenticate-faceid`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, descriptors: detections.map(d => d.descriptor) }),
@@ -230,34 +230,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Handle form submission
-  registerForm.addEventListener('submit', (event) => {
-    event.preventDefault();
+//   // Handle form submission
+//   registerForm.addEventListener('submit', (event) => {
+//     event.preventDefault();
 
-    const username = usernameInput.value;
-    const password = passwordInput.value;
+//     const username = usernameInput.value;
+//     const password = passwordInput.value;
 
-    if (!validator.isAlphanumeric(username)) {
-      registerMessage.textContent = 'Error: Username must be alphanumeric.';
-      registerMessage.classList.add('text-red-500');
-      return;
-    }
+//     if (!validator.isAlphanumeric(username)) {
+//       registerMessage.textContent = 'Error: Username must be alphanumeric.';
+//       registerMessage.classList.add('text-red-500');
+//       return;
+//     }
 
-    if (!validator.isLength(password, { min: 8 })) {
-      registerMessage.textContent = 'Error: Password must be at least 8 characters long.';
-      registerMessage.classList.add('text-red-500');
-      return;
-    }
+//     if (!validator.isLength(password, { min: 8 })) {
+//       registerMessage.textContent = 'Error: Password must be at least 8 characters long.';
+//       registerMessage.classList.add('text-red-500');
+//       return;
+//     }
 
-    // Simulate successful registration
-    registerMessage.textContent = 'Registration successful!';
-    registerMessage.classList.remove('text-red-500');
-    registerMessage.classList.add('text-green-500');
+//     // Simulate successful registration
+//     registerMessage.textContent = 'Registration successful!';
+//     registerMessage.classList.remove('text-red-500');
+//     registerMessage.classList.add('text-green-500');
 
-    // Show "Register with Face ID" button
-    registerFaceIdBtn.classList.remove('hidden');
-  });
-});
+//     // Show "Register with Face ID" button
+//     registerFaceIdBtn.classList.remove('hidden');
+//   });
+ });
 
 
 document.addEventListener('DOMContentLoaded', () => {
