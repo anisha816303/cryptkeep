@@ -1,19 +1,294 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cryptkeep - Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptkeep - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js" defer></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: #1a1a1a;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-title {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            color: #1a1a1a;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: #ffffff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .chart-title {
+            color: #1a1a1a;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .options {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .recent-activity {
+            background: #ffffff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .loading.active {
+            display: block;
+        }
+        .header {
+        position: relative; /* Set relative positioning for the container */
+    }
+
+        .error-message {
+            display: none;
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .refresh-button {
+            background-color: #3b82f6;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .refresh-button:hover {
+            background-color: #2563eb;
+        }
+
+        /* Improve mobile responsiveness */
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                min-height: 300px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .options {
+                flex-direction: column;
+            }
+
+            .options button {
+                width: 100%;
+            }
+        }
+
+        .logout-button {
+        position: absolute; /* Use absolute positioning */
+        top: 1rem; /* Adjust the distance from the top */
+        right: 1rem; /* Adjust the distance from the right */
+        background-color: #ef4444;
+        color: white;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 5px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .logout-button:hover {
+        background-color: #dc2626;
+    }
+    </style>
 </head>
 <body>
   <div class="container">
-    <h1>Cryptkeep Dashboard</h1>
-    <div class="options">
-      <button onclick="window.location.href='store.html'">Store Password</button>
-      <button onclick="window.location.href='retrieve.html'">Retrieve Password</button>
-    </div>
+      <div class="header">
+          <h1>Cryptkeep Dashboard</h1>
+          <p class="subtitle">Password Management Analytics</p>
+          <div class="header-actions">
+              <div class="options">
+                  <button onclick="window.location.href='store.html'">Store Password</button>
+                  <button onclick="window.location.href='retrieve.html'">Retrieve Password</button>
+              </div>
+              <button class="refresh-button" onclick="updateDashboard()">
+                  Refresh Data
+              </button>
+              <button class="logout-button" onclick="logout()">Logout</button>
+          </div>
+      </div>
+
+      <div class="error-message" id="errorMessage"></div>
+      <div class="loading" id="loading">Loading dashboard data...</div>
+
+      <div class="stats-grid">
+          <div class="stat-card">
+              <p class="stat-title">Total Passwords</p>
+              <p class="stat-value">-</p>
+          </div>
+          <div class="stat-card">
+              <p class="stat-title">Today's Retrievals</p>
+              <p class="stat-value">-</p>
+          </div>
+          <div class="stat-card">
+              <p class="stat-title">Active Users</p>
+              <p class="stat-value">-</p>
+          </div>
+          <div class="stat-card">
+              <p class="stat-title">Average Daily Retrievals</p>
+              <p class="stat-value">-</p>
+          </div>
+      </div>
+
+      <div class="charts-container">
+          <div class="chart-card">
+              <h3 class="chart-title">Password Retrievals (Last 7 Days)</h3>
+              <canvas id="retrievalsChart"></canvas>
+          </div>
+          <div class="chart-card">
+              <h3 class="chart-title">Usage Patterns</h3>
+              <canvas id="patternsChart"></canvas>
+          </div>
+      </div>
+
+      <div class="recent-activity">
+          <h3 class="chart-title">Recent Activity</h3>
+          <ul class="activity-list">
+              <li class="activity-item">
+                  <span>Loading activities...</span>
+                  <span></span>
+              </li>
+          </ul>
+      </div>
   </div>
 </body>
 </html>

@@ -220,7 +220,7 @@ document.getElementById('register-faceid-btn')?.addEventListener('click', async 
     video.srcObject = stream;
     video.play();
     video.style.display = 'block'; 
-    loadingSpinner.style.display = 'flex'; // Hide spinner after starting camera
+    loadingSpinner.style.display = 'flex'; 
     document.getElementById('capture-btn').style.display = 'block';
 
     document.getElementById('capture-btn').addEventListener('click', async () => {
@@ -237,13 +237,32 @@ document.getElementById('register-faceid-btn')?.addEventListener('click', async 
 });
 
 // Event listener for Face ID login button
-document.getElementById('login-faceid-btn')?.addEventListener('click', async () => {
+document.getElementById('login-faceid-btn')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const loadingSpinner = document.getElementById('loading-spinner');
   const username = prompt('Enter your username:');
-  await startCamera();
-  document.getElementById('capture-login-btn').style.display = 'block';
-  document.getElementById('capture-login-btn').addEventListener('click', async () => {
-    await authenticateWithFaceID(username);
-  });
+  loadingSpinner.style.display = 'flex'; // Show spinner
+
+  try {
+    const video = document.getElementById('video');
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    video.play();
+    video.style.display = 'block'; 
+    loadingSpinner.style.display = 'flex'; 
+    document.getElementById('capture-login-btn').style.display = 'block';
+
+    document.getElementById('capture-login-btn').addEventListener('click', async () => {
+      loadingSpinner.style.display = 'flex'; // Show spinner while capturing
+      await authenticateWithFaceID(username);
+      loadingSpinner.style.display = 'none'; // Hide spinner after capturing
+      
+    });
+  } catch (error) {
+    console.error('Error accessing camera:', error);
+    loadingSpinner.style.display = 'none'; // Hide spinner on error
+    alert('Unable to access the camera.');
+  }
 });  
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -281,37 +300,144 @@ document.addEventListener('DOMContentLoaded', () => {
  });
 
 
+
+
+// Helper function for relative time
+Date.prototype.toRelative = function() {
+  const diff = (new Date() - this) / 1000;
+  const intervals = {
+      year: 31536000,
+      month: 2592000,
+      week: 604800,
+      day: 86400,
+      hour: 3600,
+      minute: 60,
+      second: 1
+  };
+
+  for (let [unit, seconds] of Object.entries(intervals)) {
+      const interval = Math.floor(diff / seconds);
+      if (interval >= 1) {
+          return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
+      }
+  }
+  return 'just now';
+};
+
+// Keep track of chart instances to destroy them before creating new ones
+let retrievalsChart = null;
+let patternsChart = null;
+
+const updateDashboard = async () => {
+  try {
+      const response = await fetch('/api/dashboard-stats');
+      const data = await response.json();
+
+      // Update stat cards
+      document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = data.totalPasswords;
+      document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = data.todayRetrievals;
+      document.querySelector('.stat-card:nth-child(3) .stat-value').textContent = data.activeUsersCount;
+
+      // Calculate average daily retrievals
+      const avgRetrievals = Math.round(
+          data.dailyRetrievals.reduce((acc, day) => acc + day.count, 0) / data.dailyRetrievals.length
+      );
+      document.querySelector('.stat-card:nth-child(4) .stat-value').textContent = avgRetrievals;
+
+      // Destroy existing charts before creating new ones
+      if (retrievalsChart) {
+          retrievalsChart.destroy();
+      }
+      if (patternsChart) {
+          patternsChart.destroy();
+      }
+
+      // Update retrievals chart
+      retrievalsChart = new Chart(document.getElementById('retrievalsChart').getContext('2d'), {
+          type: 'bar',
+          data: {
+              labels: data.dailyRetrievals.map(day => 
+                  new Date(day._id).toLocaleDateString('en-US', { weekday: 'short' })
+              ),
+              datasets: [{
+                  label: 'Password Retrievals',
+                  data: data.dailyRetrievals.map(day => day.count),
+                  backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                  borderColor: 'rgba(76, 175, 80, 1)',
+                  borderWidth: 1
+              }]
+          },
+          options: {
+              responsive: true,
+              scales: {
+                  y: {
+                      beginAtZero: true
+                  }
+              }
+          }
+      });
+
+      // Update patterns chart
+      patternsChart = new Chart(document.getElementById('patternsChart').getContext('2d'), {
+          type: 'line',
+          data: {
+              labels: data.hourlyPattern.map(hour => `${hour._id}:00`),
+              datasets: [{
+                  label: 'Usage Pattern',
+                  data: data.hourlyPattern.map(hour => hour.count),
+                  fill: true,
+                  backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                  borderColor: 'rgba(76, 175, 80, 1)',
+                  tension: 0.4
+              }]
+          },
+          options: {
+              responsive: true,
+              scales: {
+                  y: {
+                      beginAtZero: true
+                  }
+              }
+          }
+      });
+
+      // Update recent activity
+      const activityList = document.querySelector('.activity-list');
+      activityList.innerHTML = data.recentActivity.map(activity => `
+          <li class="activity-item">
+              <span>Password ${activity.action}d</span>
+              <span>${new Date(activity.timestamp).toRelative()}</span>
+          </li>
+      `).join('');
+
+  } catch (error) {
+      console.error('Error updating dashboard:', error);
+  }
+};
+
+// Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  const loginFaceIdBtn = document.getElementById('login-faceid-btn');
-  const faceIdSection = document.getElementById('faceid-section');
-  const captureLoginBtn = document.getElementById('capture-login-btn');
-  const loadingSpinner = document.getElementById('loading-spinner');
-
-  // Toggle Face ID section
-  loginFaceIdBtn.addEventListener('click', () => {
-    faceIdSection.style.display = faceIdSection.style.display === 'none' ? 'block' : 'none';
-  });
-
-  // Start camera and show loading spinner when capturing
-  captureLoginBtn.addEventListener('click', async () => {
-    try {
-      loadingSpinner.style.display = 'flex'; // Show spinner
-      const video = document.getElementById('video');
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      video.srcObject = stream;
-      video.play();
-
-      // Simulate a delay for capturing and processing
-      setTimeout(() => {
-        loadingSpinner.style.display = 'none'; // Hide spinner after capturing
-      }, 3000); // Adjust time as needed for actual processing
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      loadingSpinner.style.display = 'none'; // Hide spinner on error
-      alert('Unable to access the camera.');
-    }
-  });
+  updateDashboard();
+  // Refresh dashboard every minute
+  setInterval(updateDashboard, 60000);
 });
+
+// Add error handling for chart loading
+window.addEventListener('error', (e) => {
+  if (e.target.tagName === 'CANVAS') {
+      console.error('Error loading chart:', e);
+      // You might want to add some user-friendly error display here
+  }
+});
+
+function logout() {
+  // Remove the username from cookies
+  Cookies.remove('username'); // Assuming the username is stored in a cookie named 'username'
+
+  // Redirect to the login page
+  window.location.href = 'login.html';
+}
+
 
 
 

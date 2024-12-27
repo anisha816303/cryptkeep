@@ -99,6 +99,10 @@ app.post('/store', async (req, res) => {
     }
 
     await vault.save();
+    await new Analytics({
+      username,
+      action: 'store'
+    }).save();
     res.status(200).json({ message: 'Data stored successfully in vault' });
   } catch (err) {
     console.error('Error storing data:', err.message);
@@ -124,6 +128,10 @@ app.post('/retrieve', async (req, res) => {
 
     // Decrypt the vault data using the stored salt and username
     const decryptedData = decryptData(vault.encryptedVault, vault.iv, username, vault.salt);
+    await new Analytics({
+      username,
+      action: 'retrieve'
+    }).save();
     res.status(200).json(decryptedData);
   } catch (err) {
     console.error('Error retrieving data:', err.message);
@@ -260,6 +268,97 @@ app.get('/login.html', (req, res) => {
 });
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+const analyticsSchema = new mongoose.Schema({
+  username: String,
+  action: String, // 'store' or 'retrieve'
+  timestamp: { type: Date, default: Date.now }
+});
+
+const Analytics = mongoose.model('Analytics', analyticsSchema);
+
+// Add these new endpoints to your server.js:
+
+// Get dashboard statistics
+app.get('/api/dashboard-stats', async (req, res) => {
+  try {
+    const now = new Date();
+    const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    // Get total passwords
+    const totalPasswords = await Vault.countDocuments();
+
+    // Get today's retrievals
+    const todayRetrievals = await Analytics.countDocuments({
+      action: 'retrieve',
+      timestamp: { $gte: dayAgo }
+    });
+
+    // Get active users (users who performed any action in last 24 hours)
+    const activeUsers = await Analytics.distinct('username', {
+      timestamp: { $gte: dayAgo }
+    });
+
+    // Get last 7 days retrievals
+    const dailyRetrievals = await Analytics.aggregate([
+      {
+        $match: {
+          action: 'retrieve',
+          timestamp: { $gte: weekAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$timestamp" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
+
+    // Get hourly usage pattern
+    const hourlyPattern = await Analytics.aggregate([
+      {
+        $match: {
+          timestamp: { $gte: dayAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $hour: "$timestamp"
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
+
+    // Get recent activity
+    const recentActivity = await Analytics.find()
+      .sort({ timestamp: -1 })
+      .limit(10);
+
+    res.json({
+      totalPasswords,
+      todayRetrievals,
+      activeUsersCount: activeUsers.length,
+      dailyRetrievals,
+      hourlyPattern,
+      recentActivity
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.listen(PORT, () => {
