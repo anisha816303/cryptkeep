@@ -4,18 +4,13 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const validator = require('validator');
-const faceapi = require('face-api.js');
+const nodemailer = require('nodemailer');
 const app = express();
 const PORT = 4000;
-const cookieParser = require('cookie-parser');
-app.use(cookieParser());
-
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/favicon.ico', (req, res) => res.status(204));
-
 
 // MongoDB connection URI
 const uri = 'mongodb+srv://anishaajit816:3JevU00J9Mr7XnrL@cryptkeepcluster.grvfy.mongodb.net/test?retryWrites=true&w=majority&appName=cryptkeepcluster';
@@ -25,11 +20,12 @@ mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Could not connect to MongoDB', err));
 
-// Define User schema and model
+// Define User schema and model with email field
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   salt: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
   descriptors: { type: Array, default: [] }
 });
 
@@ -154,40 +150,26 @@ const registerUser = async (username, password) => {
 const authenticateUser = async (username, password) => {
   const user = await User.findOne({ username });
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('Invalid username or password');
   }
-  const hashedPassword = generateKey(password, user.salt).toString('hex');
+
+  const key = generateKey(password, user.salt);
+  const hashedPassword = key.toString('hex');
+
   if (hashedPassword !== user.password) {
-    throw new Error('Invalid password');
+    throw new Error('Invalid username or password');
   }
+
   return user;
 };
 
-// Register endpoint
-app.post('/register', async (req, res) => {
-  const { username, password } = req.body;
-  if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
-  }
-  try {
-    await registerUser(username, password);
-    res.status(200).json({message:'User registered successfully'});
-  } catch (err) {
-    res.status(400).json({message:'Error registering user: ' + err.message});
-  }
-});
-
-// Login endpoint
+// The rest of your login endpoint remains the same
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  
-  // Validate input
   if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 })) {
     return res.status(400).send('Invalid input');
   }
-
   try {
-    // Attempt user authentication (you would need to implement authenticateUser function)
     await authenticateUser(username, password);
     
     // Set the username in a cookie (expires in 1 hour)
@@ -198,7 +180,29 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Store endpoint
+app.post('/store', (req, res) => {
+  const { filePath, data, password } = req.body;
+  if (!validator.isLength(password, { min: 8 })) {
+    return res.status(400).send('Invalid input');
+  }
+  storeEncryptedData(filePath, data, password);
+  res.send('Data stored successfully');
+});
 
+// Retrieve endpoint
+app.post('/retrieve', (req, res) => {
+  const { filePath, password } = req.body;
+  if (!validator.isLength(password, { min: 8 })) {
+    return res.status(400).send('Invalid input');
+  }
+  try {
+    const data = retrieveDecryptedData(filePath, password);
+    res.json(data);
+  } catch (err) {
+    res.status(400).send('Error retrieving data: ' + err.message);
+  }
+});
 
 // Face ID registration endpoint
 app.post('/api/register-faceid', async (req, res) => {
@@ -206,7 +210,7 @@ app.post('/api/register-faceid', async (req, res) => {
   try {
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(400).json({message:'User not found'});
+      return res.status(400).send('User not found');
     }
     user.descriptors.push(...descriptors);
     await user.save();
@@ -217,43 +221,31 @@ app.post('/api/register-faceid', async (req, res) => {
 });
 
 // Face ID authentication endpoint
-app.post('/api/authenticate-faceid', async (req, res) => {
+app.post('/authenticate-faceid', async (req, res) => {
   const { username, descriptors } = req.body;
-
   try {
-    // Find user by username
     const user = await User.findOne({ username });
-
-    // If user is not found, return a 400 response
     if (!user) {
-      return res.status(400).json({ success: false, message: 'User not found' });
+      return res.status(400).send('User not found');
     }
 
-    // Authenticate user by comparing descriptors using face-api.js
     const isAuthenticated = user.descriptors.some(storedDescriptor => {
       return descriptors.some(descriptor => {
-        // Check if any of the provided descriptors matches the stored ones
         return faceapi.euclideanDistance(storedDescriptor, descriptor) < 0.6;
       });
     });
 
-    // If authentication is successful
     if (isAuthenticated) {
       // Set the username in a cookie (expires in 1 hour)
       res.cookie('username', username, { maxAge: 3600000 }); // Cookie expires in 1 hour
       res.json({ success: true, message: 'Authentication successful!' });
     } else {
-      // If authentication fails, send a 401 Unauthorized status
-      res.status(401).json({ success: false, message: 'Authentication failed.' });
+      res.status(400).json({ message: 'Authentication failed.' });
     }
-
   } catch (err) {
-    // Handle any errors during the process
-    res.status(500).json({ success: false, message: 'Error authenticating Face ID: ' + err.message });
+    res.status(400).send('Error authenticating Face ID: ' + err.message);
   }
 });
-
-
 
 // Serve Frontend
 // Serve Frontend - Calc Page on Root

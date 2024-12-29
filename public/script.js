@@ -1,21 +1,18 @@
 const apiUrl = 'http://localhost:4000';
 
-
+// Ensure face-api.js is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-  // Ensure face-api.js is loaded
   if (typeof faceapi === 'undefined') {
     console.error('face-api.js is not loaded.');
     return;
   }
 
-  // Load all face-api models
   await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
   await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
   await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
   await faceapi.nets.ssdMobilenetv1.loadFromUri('/models');
-  
+
   console.log('Face API models loaded');
- 
 });
 
 // Function to start the camera
@@ -23,7 +20,7 @@ async function startCamera() {
   const video = document.getElementById('video');
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
-  video.play(); // Start video stream
+  await video.play(); // Start video stream
 }
 
 // Function to capture the image
@@ -37,62 +34,66 @@ function captureImage() {
   return canvas;
 }
 
+// Helper to handle JSON responses
+async function parseResponse(response) {
+  try {
+    return await response.json();
+  } catch {
+    return { message: response.statusText };
+  }
+}
+
 // Login form handler
-document.addEventListener('DOMContentLoaded', () => {
-  const apiUrl = 'http://localhost:4000';
+document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-  // Login form handler
-  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const masterPassword = document.getElementById('masterPassword').value;
-    console.log('Login attempt:', { username, masterPassword});
+  const username = document.getElementById('username').value;
+  const masterPassword = document.getElementById('masterPassword').value;
 
-
-    // Send login request to the server
-    const response = await fetch(`${apiUrl}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password: masterPassword }),
-    });
-    
-    const result = await response.json();  // Assuming the response is a JSON object
-    console.log('Response:', response);
-    console.log('Result:', result);
-    // Check if the response is successful
-    if (response.ok) {
-      // Successful login, redirect to dashboard
-      window.location.href = 'dashboard.html';
-    } else {
-      // Login failed, display error message
-      alert(result.message || 'Login failed!');
-    }
+  const response = await fetch(`${apiUrl}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password: masterPassword }),
   });
 
-  //Register form handler
-  document.getElementById('register-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const username = document.getElementById('username').value;
-    const masterPassword = document.getElementById('masterPassword').value;
+  const result = await parseResponse(response);
 
-    // Send registration request to the server
-    const response = await fetch(`${apiUrl}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password: masterPassword }),
-    });
+  if (response.ok) {
+    window.location.href = 'dashboard.html';
+  } else {
+    alert(result.message || 'Login failed!');
+  }
+});
 
-    // Assuming the response is a JSON object
-    const result = await response.json();
-    if (response.ok){
-      alert(result.message);
-    } else {
-      alert(result.message || 'An error occurred during registration.');
-    }
+// Register form handler
+document.getElementById('register-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const username = document.getElementById('username').value;
+  const masterPassword = document.getElementById('masterPassword').value;
+  const email = document.getElementById('email').value;
+
+  const registerMessage = document.getElementById('register-message');
+  registerMessage.innerText = '';
+  registerMessage.style.color = '';
+
+  const response = await fetch(`${apiUrl}/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password: masterPassword, email }),
   });
- });
+
+  const result = await parseResponse(response);
+
+  if (response.ok) {
+    registerMessage.innerText = 'Registration successful! Please check your email for OTP.';
+    registerMessage.style.color = 'green';
+    document.getElementById('otp-sections').style.display = 'block'; // Show OTP section
+  } else {
+    registerMessage.innerText = result.message || 'An error occurred during registration.';
+    registerMessage.style.color = 'red';
+  }
+});
 
  document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('store-form').addEventListener('submit', async (e) => {
@@ -166,51 +167,54 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-
-
-// Function for Face ID registration
+// Face ID Registration
 async function registerWithFaceID(username) {
   const canvas = captureImage();
   const detections = await faceapi.detectAllFaces(canvas).withFaceLandmarks().withFaceDescriptors();
+
   if (detections.length === 0) {
     alert('No face detected. Please try again.');
     return;
   }
-  const response = await fetch(`${apiUrl}/api/register-faceid`, {
+
+  const response = await fetch(`${apiUrl}/register-faceid`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, descriptors: detections.map(d => d.descriptor) }),
+    body: JSON.stringify({ username, descriptors: detections.map(d => Array.from(d.descriptor)) }),
   });
-  const result = await response.json();
-  alert(result.message);
+
+  const result = await parseResponse(response);
+  alert(result.message || 'Face ID registration failed.');
 }
 
-// Function for Face ID authentication
+// Face ID Login
 async function authenticateWithFaceID(username) {
   const canvas = captureImage();
   const detections = await faceapi.detectAllFaces(canvas).withFaceLandmarks().withFaceDescriptors();
+
   if (detections.length === 0) {
     alert('No face detected. Please try again.');
     return;
   }
-  const response = await fetch(`${apiUrl}/api/authenticate-faceid`, {
+
+  const response = await fetch(`${apiUrl}/authenticate-faceid`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, descriptors: detections.map(d => d.descriptor) }),
+    body: JSON.stringify({ username, descriptors: detections.map(d => Array.from(d.descriptor)) }),
   });
-  const result = await response.json();
-  if (result.success) {
+
+  const result = await parseResponse(response);
+
+  if (response.ok) {
     alert('Login successful with Face ID!');
     window.location.href = 'dashboard.html';
   } else {
-    alert(result.message);
+    alert(result.message || 'Face ID login failed.');
   }
 }
 
-
-document.getElementById('register-faceid-btn')?.addEventListener('click', async (e) => {
-  e.preventDefault();
-  const loadingSpinner = document.getElementById('loading-spinner');
+// Event listener for Face ID registration
+document.getElementById('register-faceid-btn')?.addEventListener('click', async () => {
   const username = prompt('Enter your username:');
   loadingSpinner.style.display = 'flex'; // Show spinner
 
