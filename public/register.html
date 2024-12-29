@@ -4,149 +4,48 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cryptkeep - Register</title>
-  <!-- Link to face-api.js (Ensure it's browser-compatible) -->
+  <link rel="stylesheet" href="styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/validator/validator.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
-  <style>
-    /* Styles for the Cryptkeep register page */
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-
-    .register-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-    }
-
-    .register-box {
-      background: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-      padding: 30px;
-      width: 400px;
-      text-align: center;
-    }
-
-    .register-box h1 {
-      margin-bottom: 20px;
-      font-size: 24px;
-      color: #333;
-    }
-
-    .register-box label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      color: #555;
-      text-align: left;
-    }
-
-    .register-box input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-size: 14px;
-    }
-
-    .register-box button {
-      width: 100%;
-      padding: 10px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .register-box button:hover {
-      background-color: #45a049;
-    }
-
-    #faceid-section {
-      margin-top: 20px;
-    }
-
-    #faceid-section video {
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      margin-top: 15px;
-    }
-
-    .feedback {
-      display: block;
-      font-size: 12px;
-      color: red;
-      margin-bottom: 10px;
-    }
-
-    /* Loading spinner styles */
-    .spinner {
-      margin: 20px auto;
-      width: 40px;
-      height: 40px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #4CAF50;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    #loading-spinner {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-  </style>
 </head>
 <body>
-  <div class="register-container">
-    <div class="register-box">
-      <h1>Register</h1>
-      <form id="register-form">
-        <label for="username">Username:</label>
-        <input type="text" id="username" required>
-        <span id="username-feedback" class="feedback"></span> <!-- Feedback for username -->
+  <div class="container">
+    <h1>Register</h1>
+    <form id="register-form">
+      <label for="username">Username:</label>
+      <input type="text" id="username" required>
+      <span id="username-feedback" class="feedback"></span>
+      
+      <label for="email">Email:</label>
+      <input type="email" id="email" required>
+      <span id="email-feedback" class="feedback"></span>
+      
+      <label for="masterPassword">Master Password:</label>
+      <input type="password" id="masterPassword" required>
+      <span id="password-feedback" class="feedback"></span>
+      
+      <button type="submit">Register</button>
+    </form>
 
-        <label for="masterPassword">Master Password:</label>
-        <input type="password" id="masterPassword" required>
-        <span id="password-feedback" class="feedback"></span> <!-- Feedback for password -->
-
-        <button type="submit">Register</button>
-      </form>
-</br>
-      <button id="register-faceid-btn">Register with Face ID</button>
-    </br>
-      <!-- Loading spinner when detecting face -->
-      <div id="loading-spinner" style="display:none;">
-        <div class="spinner"></div>
-        <p>Detecting face, please wait...</p>
-      </div>
-
-      <video id="video" width="640" height="480" autoplay style="display:none;"></video>
-      <button id="capture-btn" style="display:none;">Capture</button>
-      <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
-
-      <p id="register-message"></p>
-      <a href="index.html">Already have an account? Log in here.</a>
+    <!-- OTP Verification Section -->
+    <div id="otp-sections">
+      <label for="otp">Enter OTP:</label>
+      <input type="text" id="otp" required>
+      <button type="button" id="verify-otp-btn">Verify OTP</button>
+      <p id="otp-feedback" class="feedback"></p>
     </div>
+
+    <!-- Face ID Registration Section -->
+    <button id="register-faceid-btn">Register with Face ID</button>
+    
+    <!-- Face API section -->
+    <video id="video" width="640" height="480" autoplay style="display:none;"></video>
+    <button id="capture-btn" style="display:none;">Capture</button>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <p id="register-message"></p>
+    <a href="index.html">Already have an account? Log in here.</a>
   </div>
 
   <script src="script.js"></script>

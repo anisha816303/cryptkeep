@@ -16,6 +16,7 @@
     "face-api.js": "^0.22.2",
     "js-cookie": "^3.0.5",
     "mongoose": "^8.9.2",
+    "nodemailer": "^6.9.16",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
     "validator": "^13.12.0"

@@ -4,18 +4,13 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const validator = require('validator');
-const faceapi = require('face-api.js');
+const nodemailer = require('nodemailer');
 const app = express();
 const PORT = 4000;
-const cookieParser = require('cookie-parser');
-app.use(cookieParser());
-
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/favicon.ico', (req, res) => res.status(204));
-
 
 // MongoDB connection URI
 const uri = 'mongodb+srv://anishaajit816:3JevU00J9Mr7XnrL@cryptkeepcluster.grvfy.mongodb.net/?retryWrites=true&w=majority&appName=cryptkeepcluster';
@@ -25,169 +20,223 @@ mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Could not connect to MongoDB', err));
 
-// Define User schema and model
+// Define User schema and model with email field
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   salt: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
   descriptors: { type: Array, default: [] }
 });
 
 const User = mongoose.model('User', userSchema);
-
-
-// Define Vault schema and model
-const vaultSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  encryptedVault: { type: String, required: true },
-  salt: { type: String, required: true },
-  iv: { type: String, required: true }
-});
-
-const Vault = mongoose.model('Vault', vaultSchema);
 
 // Function to generate a secure key using PBKDF2
 const generateKey = (password, salt) => {
   return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256');
 };
 
-// Function to encrypt data
-const encryptData = (data, password) => {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const key = generateKey(password, salt);
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
-  const encryptedData = Buffer.concat([cipher.update(JSON.stringify(data)), cipher.final()]);
-  
-  return {
-    salt,
-    iv: iv.toString('hex'),
-    encryptedVault: encryptedData.toString('hex')
+// Create a transporter object using Gmail's SMTP server
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'cryptkeep7@gmail.com',
+    pass: 'afqf fbio vpzz sdru',
+  },
+  tls: {
+    rejectUnauthorized: false,
+  }
+});
+
+// Generate a random OTP
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
+};
+
+// Global variable to store OTP temporarily (in production, use Redis or similar)
+let storedOtp = null;
+
+// Send OTP via email
+const sendOTP = (email, otp) => {
+  const mailOptions = {
+    from: 'cryptkeep7@gmail.com',
+    to: email,
+    subject: 'Cryptkeep OTP Verification',
+    text: `Your OTP for Cryptkeep registration is: ${otp}`
   };
+
+  return new Promise((resolve, reject) => {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        reject('Error sending OTP email: ' + error);
+      } else {
+        resolve(info.response);
+      }
+    });
+  });
 };
 
-// Function to decrypt data
-const decryptData = (encryptedData, password, salt, iv) => {
-  const key = generateKey(password, salt);
-  const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.from(iv, 'hex'));
-  const decryptedData = Buffer.concat([decipher.update(Buffer.from(encryptedData, 'hex')), decipher.final()]);
-  return JSON.parse(decryptedData.toString());
-};
+// Register endpoint (includes OTP generation)
+app.post('/register', async (req, res) => {
+  const { username, password, email } = req.body;
 
-app.post('/store', async (req, res) => {
-  const { username, data, password } = req.body;
-
-  // Validate inputs
-  if (!username || !data || !password || !validator.isLength(password, { min: 8 })) {
+  if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 }) || !validator.isEmail(email)) {
     return res.status(400).send('Invalid input');
   }
 
   try {
-    // Encrypt data with the master password
-    const { salt, iv, encryptedVault } = encryptData(data, password);
+    // Generate OTP
+    const otp = generateOTP();
+    console.log(`Generated OTP: ${otp}`);
 
-    // Check if a vault exists for the user
-    let vault = await Vault.findOne({ username });
-    if (vault) {
-      // Update existing vault
-      vault.encryptedVault = encryptedVault;
-      vault.salt = salt;
-      vault.iv = iv;
-    } else {
-      // Create a new vault
-      vault = new Vault({ username, encryptedVault, salt, iv });
-    }
+    // Send OTP email
+    await sendOTP(email, otp);
 
-    await vault.save();
-    res.status(200).send('Data stored successfully in vault');
+    // Store OTP temporarily
+    storedOtp = otp;
+    console.log(`Stored OTP: ${storedOtp}`);
+
+    res.json({ message: 'OTP sent to your email. Please verify it to complete registration.' });
   } catch (err) {
-    res.status(500).send('Error storing data: ' + err.message);
+    res.status(400).send('Error registering user: ' + err.message);
   }
 });
 
+// OTP verification endpoint
+app.post('/verify-otp', async (req, res) => {
+  const { otpEntered, username, password, email } = req.body;
 
-app.post('/retrieve', async (req, res) => {
-  const { username, password } = req.body;
+  // Log the incoming request body to check if password is defined
+  console.log('Request body:', req.body);
 
-  // Validate inputs
-  if (!username || !password || !validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
+  // Ensure OTP is available in memory
+  if (!storedOtp) {
+    return res.status(400).json({ success: false, message: 'OTP has not been generated or stored.' });
   }
+
+  // Convert both entered OTP and stored OTP to strings (if they aren't already)
+  const otpEnteredStr = String(otpEntered);  // Ensure entered OTP is a string
+  const storedOtpStr = String(storedOtp);    // Ensure stored OTP is a string
+
+  console.log(`Entered OTP: ${otpEnteredStr}`);
+  console.log(`Stored OTP: ${storedOtpStr}`);
+
+  // Compare the two OTPs
+  if (otpEnteredStr === storedOtpStr) {
+    console.log('OTP is valid'); // This prints to the console if OTPs match
+    try {
+      // OTP is valid, now register the user
+      if (!password) {
+        return res.status(400).send('Password is required.');
+      }
+
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = generateKey(password, salt).toString('hex');
+     
+      // Create new user object
+      const user = new User({ username, password: hashedPassword, salt, email });
+
+      // Save user to database
+      const savedUser = await user.save();  // Await the save and store the result
+      console.log('User registered successfully:', savedUser);
+
+      // Clear the stored OTP after successful registration
+      storedOtp = null;
+
+      // Return success response
+      res.json({ success: true, message: 'OTP verified successfully! Registration complete.' });
+    } catch (err) {
+      if (err.name === 'ValidationError') {
+        // Log validation error details
+        console.error('Validation error:', err.errors);
+        return res.status(400).send('Validation error: ' + err.message);
+      }
+     
+      // If it's a different kind of error, log the error message
+      console.error('Error saving user:', err);
+      return res.status(400).send('Error saving user: ' + err.message);
+    }
+   
+  }
+  else {
+    // OTP is invalid
+    console.log('OTP is invalid'); // This prints to the console if OTPs do not match
+    
+    return res.status(400).send('Invalid OTP. Please try again.');
+  }
+
+});
+
+// Step 3: Finalize Registration
+app.post('/finalize-registration', async (req, res) => {
+  const { username, password, email } = req.body;
 
   try {
-    // Find the vault
-    const vault = await Vault.findOne({ username });
-    if (!vault) {
-      return res.status(404).send('Vault not found');
-    }
+    await registerUser(username, password, email); // Register user
+    console.log('Registration completed successfully for:', username);
 
-    // Decrypt the vault data
-    const decryptedData = decryptData(vault.encryptedVault, password, vault.salt, vault.iv);
-    res.status(200).json(decryptedData);
+    res.send('User registered successfully.');
   } catch (err) {
-    res.status(500).send('Error retrieving data: ' + err.message);
+    res.status(400).send('Error registering user: ' + err.message);
   }
 });
 
 
-// Function to register a new user
-const registerUser = async (username, password) => {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const hashedPassword = generateKey(password, salt).toString('hex');
-  const user = new User({ username, password: hashedPassword, salt });
-  await user.save();
-  console.log('User registered successfully');
-};
 
-// Function to authenticate a user
+// Add this function before the login endpoint
 const authenticateUser = async (username, password) => {
   const user = await User.findOne({ username });
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('Invalid username or password');
   }
-  const hashedPassword = generateKey(password, user.salt).toString('hex');
+
+  const key = generateKey(password, user.salt);
+  const hashedPassword = key.toString('hex');
+
   if (hashedPassword !== user.password) {
-    throw new Error('Invalid password');
+    throw new Error('Invalid username or password');
   }
+
   return user;
 };
 
-// Register endpoint
-app.post('/register', async (req, res) => {
-  const { username, password } = req.body;
-  if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
-  }
-  try {
-    await registerUser(username, password);
-    res.status(200).json({message:'User registered successfully'});
-  } catch (err) {
-    res.status(400).json({message:'Error registering user: ' + err.message});
-  }
-});
-
-// Login endpoint
+// The rest of your login endpoint remains the same
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  
-  // Validate input
   if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 })) {
     return res.status(400).send('Invalid input');
   }
-
   try {
-    // Attempt user authentication (you would need to implement authenticateUser function)
     await authenticateUser(username, password);
-    
-    // Set the username in a cookie (expires in 1 hour)
-    res.cookie('username', username, { maxAge: 3600000, httpOnly: true }); // Cookie expires in 1 hour
     res.json({ success: true });
   } catch (err) {
     res.status(400).json({ success: false, message: 'Error logging in: ' + err.message });
   }
 });
 
+// Store endpoint
+app.post('/store', (req, res) => {
+  const { filePath, data, password } = req.body;
+  if (!validator.isLength(password, { min: 8 })) {
+    return res.status(400).send('Invalid input');
+  }
+  storeEncryptedData(filePath, data, password);
+  res.send('Data stored successfully');
+});
 
+// Retrieve endpoint
+app.post('/retrieve', (req, res) => {
+  const { filePath, password } = req.body;
+  if (!validator.isLength(password, { min: 8 })) {
+    return res.status(400).send('Invalid input');
+  }
+  try {
+    const data = retrieveDecryptedData(filePath, password);
+    res.json(data);
+  } catch (err) {
+    res.status(400).send('Error retrieving data: ' + err.message);
+  }
+});
 
 // Face ID registration endpoint
 app.post('/api/register-faceid', async (req, res) => {
@@ -195,7 +244,7 @@ app.post('/api/register-faceid', async (req, res) => {
   try {
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(400).json({message:'User not found'});
+      return res.status(400).send('User not found');
     }
     user.descriptors.push(...descriptors);
     await user.save();
@@ -206,43 +255,29 @@ app.post('/api/register-faceid', async (req, res) => {
 });
 
 // Face ID authentication endpoint
-app.post('/api/authenticate-faceid', async (req, res) => {
+app.post('/authenticate-faceid', async (req, res) => {
   const { username, descriptors } = req.body;
-
   try {
-    // Find user by username
     const user = await User.findOne({ username });
-
-    // If user is not found, return a 400 response
     if (!user) {
-      return res.status(400).json({ success: false, message: 'User not found' });
+      return res.status(400).send('User not found');
     }
 
-    // Authenticate user by comparing descriptors using face-api.js
     const isAuthenticated = user.descriptors.some(storedDescriptor => {
       return descriptors.some(descriptor => {
-        // Check if any of the provided descriptors matches the stored ones
         return faceapi.euclideanDistance(storedDescriptor, descriptor) < 0.6;
       });
     });
 
-    // If authentication is successful
     if (isAuthenticated) {
-      // Set the username in a cookie (expires in 1 hour)
-      res.cookie('username', username, { maxAge: 3600000, httpOnly: true }); // Cookie expires in 1 hour
-      res.json({ success: true, message: 'Authentication successful!' });
+      res.json({ message: 'Authentication successful!' });
     } else {
-      // If authentication fails, send a 401 Unauthorized status
-      res.status(401).json({ success: false, message: 'Authentication failed.' });
+      res.status(400).json({ message: 'Authentication failed.' });
     }
-
   } catch (err) {
-    // Handle any errors during the process
-    res.status(500).json({ success: false, message: 'Error authenticating Face ID: ' + err.message });
+    res.status(400).send('Error authenticating Face ID: ' + err.message);
   }
 });
-
-
 
 // Serve Frontend
 app.get('/', (req, res) => {
