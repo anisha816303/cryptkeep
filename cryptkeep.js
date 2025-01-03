@@ -2,15 +2,20 @@ const fs = require('fs');
 const crypto = require('crypto');
 const express = require('express');
 const path = require('path');
+const faceapi = require('face-api.js');
 const mongoose = require('mongoose');
 const validator = require('validator');
 const nodemailer = require('nodemailer');
 const app = express();
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
+
 const PORT = 4000;
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/favicon.ico', (req, res) => res.status(204));
 
 // MongoDB connection URI
 const uri = 'mongodb+srv://anishaajit816:3JevU00J9Mr7XnrL@cryptkeepcluster.grvfy.mongodb.net/test?retryWrites=true&w=majority&appName=cryptkeepcluster';
@@ -136,15 +141,159 @@ app.post('/retrieve', async (req, res) => {
 });
 
 
+// Create a transporter object using Gmail's SMTP server
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'cryptkeep7@gmail.com',
+    pass: 'afqf fbio vpzz sdru',
+  },
+  tls: {
+    rejectUnauthorized: false,
+  }
+});
+
+// Generate a random OTP
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
+};
+
+// Global variable to store OTP temporarily (in production, use Redis or similar)
+let storedOtp = null;
+
+// Send OTP via email
+const sendOTP = (email, otp) => {
+  const mailOptions = {
+    from: 'cryptkeep7@gmail.com',
+    to: email,
+    subject: 'Cryptkeep OTP Verification',
+    text: `Your OTP for Cryptkeep registration is: ${otp}`
+  };
+
+  return new Promise((resolve, reject) => {
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        reject('Error sending OTP email: ' + error);
+      } else {
+        resolve(info.response);
+      }
+    });
+  });
+};
 
 // Function to register a new user
-const registerUser = async (username, password) => {
+const registerUser = async (username, password, email) => {
   const salt = crypto.randomBytes(16).toString('hex');
   const hashedPassword = generateKey(password, salt).toString('hex');
-  const user = new User({ username, password: hashedPassword, salt });
+  const user = new User({ username, password: hashedPassword, salt ,email});
   await user.save();
   console.log('User registered successfully');
 };
+
+app.post('/register', async (req, res) => {
+  const { username, password, email } = req.body;
+
+  if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 }) || !validator.isEmail(email)) {
+    return res.status(400).send('Invalid input');
+  }
+
+  try {
+    // Generate OTP
+    const otp = generateOTP();
+    console.log(`Generated OTP: ${otp}`);
+
+    // Send OTP email
+    await sendOTP(email, otp);
+
+    // Store OTP temporarily
+    storedOtp = otp;
+    console.log(`Stored OTP: ${storedOtp}`);
+
+    res.json({ message: 'OTP sent to your email. Please verify it to complete registration.' });
+  } catch (err) {
+    res.status(400).send('Error registering user: ' + err.message);
+  }
+});
+
+// OTP verification endpoint
+app.post('/verify-otp', async (req, res) => {
+  const { otpEntered, username, password, email } = req.body;
+
+  // Log the incoming request body to check if password is defined
+  console.log('Request body:', req.body);
+
+  // Ensure OTP is available in memory
+  if (!storedOtp) {
+    return res.status(400).json({ success: false, message: 'OTP has not been generated or stored.' });
+  }
+
+  // Convert both entered OTP and stored OTP to strings (if they aren't already)
+  const otpEnteredStr = String(otpEntered);  // Ensure entered OTP is a string
+  const storedOtpStr = String(storedOtp);    // Ensure stored OTP is a string
+
+  console.log(`Entered OTP: ${otpEnteredStr}`);
+  console.log(`Stored OTP: ${storedOtpStr}`);
+
+  // Compare the two OTPs
+  if (otpEnteredStr === storedOtpStr) {
+    console.log('OTP is valid'); // This prints to the console if OTPs match
+    try {
+      // OTP is valid, now register the user
+      if (!password) {
+        return res.status(400).send('Password is required.');
+      }
+
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = generateKey(password, salt).toString('hex');
+     
+      // Create new user object
+      const user = new User({ username, password: hashedPassword, salt, email });
+
+      // Save user to database
+      const savedUser = await user.save();  // Await the save and store the result
+      console.log('User registered successfully:', savedUser);
+
+      // Clear the stored OTP after successful registration
+      storedOtp = null;
+
+      // Return success response
+      res.json({ success: true, message: 'OTP verified successfully! Registration complete.' });
+    } catch (err) {
+      if (err.name === 'ValidationError') {
+        // Log validation error details
+        console.error('Validation error:', err.errors);
+        return res.status(400).send('Validation error: ' + err.message);
+      }
+     
+      // If it's a different kind of error, log the error message
+      console.error('Error saving user:', err);
+      return res.status(400).send('Error saving user: ' + err.message);
+    }
+   
+  }
+  else {
+    // OTP is invalid
+    console.log('OTP is invalid'); // This prints to the console if OTPs do not match
+    
+    return res.status(400).send('Invalid OTP. Please try again.');
+  }
+
+});
+
+// Step 3: Finalize Registration
+app.post('/finalize-registration', async (req, res) => {
+  const { username, password, email } = req.body;
+
+  try {
+    await registerUser(username, password, email); // Register user
+    console.log('Registration completed successfully for:', username);
+
+    res.send('User registered successfully.');
+  } catch (err) {
+    res.status(400).send('Error registering user: ' + err.message);
+  }
+});
+
 
 // Function to authenticate a user
 const authenticateUser = async (username, password) => {
@@ -180,29 +329,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Store endpoint
-app.post('/store', (req, res) => {
-  const { filePath, data, password } = req.body;
-  if (!validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
-  }
-  storeEncryptedData(filePath, data, password);
-  res.send('Data stored successfully');
-});
-
-// Retrieve endpoint
-app.post('/retrieve', (req, res) => {
-  const { filePath, password } = req.body;
-  if (!validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
-  }
-  try {
-    const data = retrieveDecryptedData(filePath, password);
-    res.json(data);
-  } catch (err) {
-    res.status(400).send('Error retrieving data: ' + err.message);
-  }
-});
 
 // Face ID registration endpoint
 app.post('/api/register-faceid', async (req, res) => {
@@ -221,31 +347,42 @@ app.post('/api/register-faceid', async (req, res) => {
 });
 
 // Face ID authentication endpoint
-app.post('/authenticate-faceid', async (req, res) => {
+app.post('/api/authenticate-faceid', async (req, res) => {
   const { username, descriptors } = req.body;
+
   try {
+    // Find user by username
     const user = await User.findOne({ username });
+
+    // If user is not found, return a 400 response
     if (!user) {
-      return res.status(400).send('User not found');
+      return res.status(400).json({ success: false, message: 'User not found' });
     }
 
+    // Authenticate user by comparing descriptors using face-api.js
     const isAuthenticated = user.descriptors.some(storedDescriptor => {
       return descriptors.some(descriptor => {
+        // Check if any of the provided descriptors matches the stored ones
         return faceapi.euclideanDistance(storedDescriptor, descriptor) < 0.6;
       });
     });
 
+    // If authentication is successful
     if (isAuthenticated) {
       // Set the username in a cookie (expires in 1 hour)
       res.cookie('username', username, { maxAge: 3600000 }); // Cookie expires in 1 hour
       res.json({ success: true, message: 'Authentication successful!' });
     } else {
-      res.status(400).json({ message: 'Authentication failed.' });
+      // If authentication fails, send a 401 Unauthorized status
+      res.status(401).json({ success: false, message: 'Authentication failed.' });
     }
+
   } catch (err) {
-    res.status(400).send('Error authenticating Face ID: ' + err.message);
+    // Handle any errors during the process
+    res.status(500).json({ success: false, message: 'Error authenticating Face ID: ' + err.message });
   }
 });
+
 
 // Serve Frontend
 // Serve Frontend - Calc Page on Root

@@ -177,44 +177,42 @@ async function registerWithFaceID(username) {
     return;
   }
 
-  const response = await fetch(`${apiUrl}/register-faceid`, {
+  const response = await fetch(`${apiUrl}/api/register-faceid`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, descriptors: detections.map(d => Array.from(d.descriptor)) }),
+    body: JSON.stringify({ username, descriptors: detections.map(d => d.descriptor) }),
   });
 
   const result = await parseResponse(response);
   alert(result.message || 'Face ID registration failed.');
 }
 
-// Face ID Login
 async function authenticateWithFaceID(username) {
   const canvas = captureImage();
   const detections = await faceapi.detectAllFaces(canvas).withFaceLandmarks().withFaceDescriptors();
-
   if (detections.length === 0) {
     alert('No face detected. Please try again.');
     return;
   }
 
-  const response = await fetch(`${apiUrl}/authenticate-faceid`, {
+  
+  const response = await fetch(`${apiUrl}/api/authenticate-faceid`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, descriptors: detections.map(d => Array.from(d.descriptor)) }),
+    body: JSON.stringify({ username, descriptors: detections.map(d => d.descriptor) }),
   });
-
-  const result = await parseResponse(response);
-
-  if (response.ok) {
+  const result = await response.json();
+  if (result.success) {
     alert('Login successful with Face ID!');
     window.location.href = 'dashboard.html';
   } else {
-    alert(result.message || 'Face ID login failed.');
+    alert(result.message);
   }
 }
 
-// Event listener for Face ID registration
-document.getElementById('register-faceid-btn')?.addEventListener('click', async () => {
+document.getElementById('register-faceid-btn')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const loadingSpinner = document.getElementById('loading-spinner');
   const username = prompt('Enter your username:');
   loadingSpinner.style.display = 'flex'; // Show spinner
 
@@ -239,6 +237,7 @@ document.getElementById('register-faceid-btn')?.addEventListener('click', async 
     alert('Unable to access the camera.');
   }
 });
+
 
 // Event listener for Face ID login button
 document.getElementById('login-faceid-btn')?.addEventListener('click', async (e) => {
@@ -441,6 +440,38 @@ function logout() {
   // Redirect to the login page
   window.location.href = 'login.html';
 }
+
+
+// OTP Verification
+document.getElementById('verify-otp-btn')?.addEventListener('click', async () => {
+  const otpEntered = document.getElementById('otp').value;
+  const username = document.getElementById('username').value;
+  const masterPassword = document.getElementById('masterPassword').value;
+  const email = document.getElementById('email').value;
+
+  const response = await fetch(`${apiUrl}/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      otpEntered,
+      username,
+      password: masterPassword,
+      email 
+    }),
+  });
+
+  const result = await parseResponse(response);
+  const otpFeedback = document.getElementById('otp-feedback');
+
+  if (response.ok) {
+    otpFeedback.textContent = 'OTP verified successfully!';
+    otpFeedback.style.color = 'green';
+    window.location.href = 'login.html'; // Redirect to dashboard after OTP verification
+  } else {
+    otpFeedback.textContent = result.message || 'Invalid OTP. Please try again.';
+    otpFeedback.style.color = 'red';
+  }
+});
 
 
 
