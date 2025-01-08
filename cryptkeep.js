@@ -31,8 +31,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   salt: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  descriptors: { type: Array, default: [] },
-  failedLoginAttempts:{type:Number, default:0}
+  descriptors: { type: Array, default: [] }
 });
 
 const User = mongoose.model('User', userSchema);
@@ -77,6 +76,7 @@ const decryptData = (encryptedData, iv, username, salt) => {
   return JSON.parse(decryptedData.toString());
 };
 
+// Store endpoint
 app.post('/store', async (req, res) => {
   const { username, data } = req.body;
 
@@ -86,33 +86,24 @@ app.post('/store', async (req, res) => {
   }
 
   try {
-    const salt = crypto.randomBytes(16).toString('hex'); // Generate a new salt
-    const { iv, encryptedVault } = encryptData(data, username, salt); // Encrypt the data
+    const salt = crypto.randomBytes(16).toString('hex'); // Generate a new salt for each user
+    const { iv, encryptedVault } = encryptData(data, username, salt);
 
-    // Find the user's vault
+    // Check if a vault exists for the user
     let vault = await Vault.findOne({ username });
-
     if (vault) {
-      // Append the new encrypted data to the existing encryptedVault string
-      vault.encryptedVault += `|${encryptedVault}`;
-      vault.iv += `|${iv}`; // Append the IV (keep a separator)
-      vault.salt += `|${salt}`; // Append the salt (keep a separator)
+      vault.encryptedVault = encryptedVault;
+      vault.iv = iv;
+      vault.salt = salt; // Store the salt
     } else {
-      // If no vault exists, create a new one
-      vault = new Vault({
-        username,
-        encryptedVault, // Save as a single string
-        iv,
-        salt,
-      });
+      vault = new Vault({ username, encryptedVault, iv, salt });
     }
 
     await vault.save();
     await new Analytics({
       username,
-      action: 'store',
+      action: 'store'
     }).save();
-
     res.status(200).json({ message: 'Data stored successfully in vault' });
   } catch (err) {
     console.error('Error storing data:', err.message);
@@ -120,62 +111,34 @@ app.post('/store', async (req, res) => {
   }
 });
 
-
+// Retrieve endpoint
 app.post('/retrieve', async (req, res) => {
-  const { username, search } = req.body;
+  const { username } = req.body;
 
-  // Validate inputs
-  if (!username || !search) {
+  // Validate input
+  if (!username) {
     return res.status(400).json({ message: 'Invalid input' });
   }
 
   try {
+    // Find the user's vault in the database
     const vault = await Vault.findOne({ username });
     if (!vault) {
       return res.status(404).json({ message: 'Vault not found' });
     }
 
-    // Split the concatenated strings
-    const encryptedVaults = vault.encryptedVault.split('|');
-    const ivs = vault.iv.split('|');
-    const salts = vault.salt.split('|');
-
-    // Decrypt each entry and filter by the search query
-    const results = encryptedVaults.map((encryptedData, index) => {
-      const decryptedData = decryptData(
-        encryptedData,
-        ivs[index],
-        username,
-        salts[index]
-      );
-      return decryptedData;
-    });
-
-    // Filter the decrypted results
-    const filteredResults = results.filter(item => {
-      return (
-        item.description?.toLowerCase().includes(search.toLowerCase()) ||
-        item.email?.toLowerCase().includes(search.toLowerCase()) ||
-        item.password?.toLowerCase().includes(search.toLowerCase())
-      );
-    });
-
-    if (filteredResults.length === 0) {
-      return res.status(404).json({ message: 'No matching records found' });
-    }
-
+    // Decrypt the vault data using the stored salt and username
+    const decryptedData = decryptData(vault.encryptedVault, vault.iv, username, vault.salt);
     await new Analytics({
       username,
-      action: 'retrieve',
+      action: 'retrieve'
     }).save();
-
-    res.status(200).json(filteredResults);
+    res.status(200).json(decryptedData);
   } catch (err) {
     console.error('Error retrieving data:', err.message);
     res.status(500).json({ message: 'Error retrieving data: ' + err.message });
   }
 });
-
 
 
 // Create a transporter object using Gmail's SMTP server
@@ -349,57 +312,62 @@ const authenticateUser = async (username, password) => {
   return user;
 };
 
+// The rest of your login endpoint remains the same
+// Login endpoint
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
-  // Validate inputs before checking for invalid username or password
-  if (!username || !password) {
-    return res.status(400).send('Username and password are required');
-  }
-  if (!validator.isAlphanumeric(username)) {
-    return res.status(400).send('Username must be alphanumeric');
-  }
-  if (!validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Password must be at least 8 characters long');
+  if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 })) {
+    return res.status(400).send('Invalid input');
   }
 
   try {
-    const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(400).json({ success: false, message: 'Invalid username or password' });
-    }
+    const user = await authenticateUser(username, password);
 
-    const key = generateKey(password, user.salt);
-    const hashedPassword = key.toString('hex');
+    // Generate OTP
+    const otp = generateOTP();
+    console.log(`Generated OTP for login: ${otp}`);
 
-    if (hashedPassword !== user.password) {
-      // Increment failed login attempts
-      user.failedLoginAttempts += 1;
-      await user.save();
+    // Send OTP to user's email (retrieved from DB)
+    await sendOTP(user.email, otp);
 
-      // If failed attempts exceed 5, delete the user and their vault
-      if (user.failedLoginAttempts >= 5) {
-        // Delete the vault associated with this user
-        await Vault.deleteOne({ username });
+    // Store OTP temporarily
+    storedOtp = otp;
+    console.log(`Stored OTP for login: ${storedOtp}`);
 
-        // Delete the user
-        await User.deleteOne({ username });
-
-        return res.status(400).json({ success: false, message: 'Too many failed login attempts. User and vault deleted.' });
-      }
-
-      return res.status(400).json({ success: false, message: 'Invalid username or password' });
-    }
-
-    // Reset failed login attempts on successful login
-    user.failedLoginAttempts = 0;
-    await user.save();
-
-    // Set the username in a cookie (expires in 1 hour)
-    res.cookie('username', username, { maxAge: 3600000 }); // Cookie expires in 1 hour
-    res.json({ success: true });
+    res.json({ success: true, message: 'OTP sent to your email. Please verify to complete login.' });
   } catch (err) {
     res.status(400).json({ success: false, message: 'Error logging in: ' + err.message });
+  }
+});
+
+// Verify OTP for Login
+app.post('/verify-login-otp', async (req, res) => {
+  const { otpEntered, username } = req.body;
+
+  if (!storedOtp) {
+    return res.status(400).json({ success: false, message: 'OTP has not been generated or stored.' });
+  }
+
+  // Retrieve user from database using the username
+  const user = await User.findOne({ username });
+  if (!user) {
+    return res.status(400).send('User not found.');
+  }
+
+  const otpEnteredStr = String(otpEntered); // Ensure entered OTP is a string
+  const storedOtpStr = String(storedOtp);   // Ensure stored OTP is a string
+
+  if (otpEnteredStr === storedOtpStr) {
+    console.log('Login OTP verified successfully.');
+
+    // Clear the stored OTP after successful verification
+    storedOtp = null;
+
+    res.json({ success: true, message: 'OTP verified successfully!' });
+  } else {
+    console.log('Invalid login OTP.');
+    return res.status(400).send('Invalid OTP. Please try again.');
   }
 });
 
@@ -483,46 +451,31 @@ const Analytics = mongoose.model('Analytics', analyticsSchema);
 
 // Add these new endpoints to your server.js:
 
+// Get dashboard statistics
 app.get('/api/dashboard-stats', async (req, res) => {
   try {
-    // Extract username from the cookie
-    const username = req.cookies.username;
-
-    if (!username) {
-      return res.status(401).json({ error: 'Unauthorized: No username found in cookies' });
-    }
-
     const now = new Date();
     const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-    const vault = await Vault.findOne({ username });
+    // Get total passwords
+    const totalPasswords = await Vault.countDocuments();
 
-    
-      const totalPasswords = vault.encryptedVault.split('|').length;
-      console.log(`Total passwords: ${totalPasswords}`);
-   
-
-
-    // Get today's retrievals for this user
+    // Get today's retrievals
     const todayRetrievals = await Analytics.countDocuments({
-      username,  // filter by username
       action: 'retrieve',
       timestamp: { $gte: dayAgo }
     });
 
-    // Get active users (users who performed any action in the last 24 hours)
-const activeUsers = await Analytics.distinct('username', {
-  timestamp: { $gte: dayAgo } // Filter only by timestamp
-});
+    // Get active users (users who performed any action in last 24 hours)
+    const activeUsers = await Analytics.distinct('username', {
+      timestamp: { $gte: dayAgo }
+    });
 
-console.log(activeUsers);
-
-    // Get last 7 days retrievals for this user
+    // Get last 7 days retrievals
     const dailyRetrievals = await Analytics.aggregate([
       {
         $match: {
-          username,  // filter by username
           action: 'retrieve',
           timestamp: { $gte: weekAgo }
         }
@@ -540,11 +493,10 @@ console.log(activeUsers);
       }
     ]);
 
-    // Get hourly usage pattern for this user
+    // Get hourly usage pattern
     const hourlyPattern = await Analytics.aggregate([
       {
         $match: {
-          username,  // filter by username
           timestamp: { $gte: dayAgo }
         }
       },
@@ -561,8 +513,8 @@ console.log(activeUsers);
       }
     ]);
 
-    // Get recent activity for this user
-    const recentActivity = await Analytics.find({ username })  // filter by username
+    // Get recent activity
+    const recentActivity = await Analytics.find()
       .sort({ timestamp: -1 })
       .limit(10);
 
@@ -579,9 +531,6 @@ console.log(activeUsers);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
-
-
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

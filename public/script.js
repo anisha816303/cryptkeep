@@ -44,6 +44,7 @@ async function parseResponse(response) {
 }
 
 // Login form handler
+// Login form handler
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -59,11 +60,39 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
   const result = await parseResponse(response);
 
   if (response.ok) {
-    window.location.href = 'dashboard.html';
+    document.getElementById('login-message').innerText = 'OTP has been sent to your email. Please verify it.';
+    document.getElementById('login-message').style.color = 'green';
+    document.getElementById('login-otp-section').style.display = 'block'; // Show OTP section
   } else {
-    alert(result.message || 'Login failed!');
+    document.getElementById('login-message').innerText = result.message || 'Login failed!';
+    document.getElementById('login-message').style.color = 'red';
   }
 });
+
+// OTP Verification for Login
+document.getElementById('verify-login-otp-btn')?.addEventListener('click', async () => {
+  const otpEntered = document.getElementById('login-otp').value;
+  const username = document.getElementById('username').value;
+
+  const response = await fetch(`${apiUrl}/verify-login-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ otpEntered, username }),
+  });
+
+  const result = await parseResponse(response);
+  const otpFeedback = document.getElementById('login-otp-feedback');
+
+  if (response.ok) {
+    otpFeedback.textContent = 'OTP verified successfully! Redirecting to dashboard...';
+    otpFeedback.style.color = 'green';
+    window.location.href = 'dashboard.html';
+  } else {
+    otpFeedback.textContent = result.message || 'Invalid OTP. Please try again.';
+    otpFeedback.style.color = 'red';
+  }
+});
+
 
 // Register form handler
 document.getElementById('register-form')?.addEventListener('submit', async (e) => {
