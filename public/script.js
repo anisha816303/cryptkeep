@@ -446,6 +446,7 @@ function logout() {
 }
 
 
+
 // OTP Verification
 document.getElementById('verify-otp-btn')?.addEventListener('click', async () => {
   const otpEntered = document.getElementById('otp').value;

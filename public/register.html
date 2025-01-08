@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cryptkeep - Register</title>
+  <!-- Link to face-api.js (Ensure it's browser-compatible) -->
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/validator/validator.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
   <style>
     /* Styles for the Cryptkeep register page */
     body {
@@ -117,49 +119,36 @@
 <body>
   <div class="register-container">
     <div class="register-box">
-      <!-- Register Form -->
       <h1>Register</h1>
       <form id="register-form">
         <label for="username">Username:</label>
         <input type="text" id="username" required>
-        <span id="username-feedback" class="feedback"></span>
-        
-        <label for="email">Email:</label>
-        <input type="email" id="email" required>
-        <span id="email-feedback" class="feedback"></span>
-        
+        <span id="username-feedback" class="feedback"></span> <!-- Feedback for username -->
+
         <label for="masterPassword">Master Password:</label>
         <input type="password" id="masterPassword" required>
-        <span id="password-feedback" class="feedback"></span>
-        
+        <span id="password-feedback" class="feedback"></span> <!-- Feedback for password -->
+
         <button type="submit">Register</button>
       </form>
-
-      <!-- OTP Verification Section -->
-      <div id="otp-sections">
-        <label for="otp">Enter OTP:</label>
-        <input type="text" id="otp" required>
-        <button type="button" id="verify-otp-btn">Verify OTP</button>
-        <p id="otp-feedback" class="feedback"></p>
+</br>
+      <button id="register-faceid-btn">Register with Face ID</button>
+    </br>
+      <!-- Loading spinner when detecting face -->
+      <div id="loading-spinner" style="display:none;">
+        <div class="spinner"></div>
+        <p>Detecting face, please wait...</p>
       </div>
 
-      </br>
-        <button id="register-faceid-btn">Register with Face ID</button>
-      </br>
-        <!-- Loading spinner when detecting face -->
-        <div id="loading-spinner" style="display:none;">
-          <div class="spinner"></div>
-          <p>Detecting face, please wait...</p>
-        </div>
+      <video id="video" width="640" height="480" autoplay style="display:none;"></video>
+      <button id="capture-btn" style="display:none;">Capture</button>
+      <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
-        <video id="video" width="640" height="480" autoplay style="display:none;"></video>
-        <button id="capture-btn" style="display:none;">Capture</button>
-        <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
-
-        <p id="register-message"></p>
-        <a href="login.html">Already have an account? Log in here.</a>
-      </div>
+      <p id="register-message"></p>
+      <a href="index.html">Already have an account? Log in here.</a>
     </div>
-    <script src="script.js"></script>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
