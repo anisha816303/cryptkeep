@@ -395,11 +395,47 @@ app.post('/login', async (req, res) => {
     user.failedLoginAttempts = 0;
     await user.save();
 
+    const otp = generateOTP();
+    await sendOTP(user.email, otp);
+    storedOtp = otp;
+
     // Set the username in a cookie (expires in 1 hour)
     res.cookie('username', username, { maxAge: 3600000 }); // Cookie expires in 1 hour
-    res.json({ success: true });
+    res.json({ success: true, message: 'OTP sent to your email. Please verify to complete login.' });
   } catch (err) {
     res.status(400).json({ success: false, message: 'Error logging in: ' + err.message });
+  }
+
+});
+
+app.post('/verify-login-otp', async (req, res) => {
+  const { otpEntered, username } = req.body;
+
+  if (!storedOtp) {
+    return res.status(400).json({ success: false, message: 'OTP has not been generated or stored.' });
+  }
+
+  // Retrieve user from database using the username
+  const user = await User.findOne({ username });
+  if (!user) {
+    return res.status(400).send('User not found.');
+  }
+
+  const otpEnteredStr = String(otpEntered); // Ensure entered OTP is a string
+  const storedOtpStr = String(storedOtp);   // Ensure stored OTP is a string
+
+  if (otpEnteredStr === storedOtpStr) {
+    console.log('Login OTP verified successfully.');
+
+    // Clear the stored OTP after successful verification
+    storedOtp = null;
+
+    res.cookie('username', username, { maxAge: 3600000 });
+    res.json({ success: true, message: 'OTP verified successfully!' });
+    
+  } else {
+    console.log('Invalid login OTP.');
+    return res.status(400).send('Invalid OTP. Please try again.');
   }
 });
 
