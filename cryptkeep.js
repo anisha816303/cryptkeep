@@ -409,31 +409,40 @@ const Analytics = mongoose.model('Analytics', analyticsSchema);
 
 // Add these new endpoints to your server.js:
 
-// Get dashboard statistics
 app.get('/api/dashboard-stats', async (req, res) => {
   try {
+    // Extract username from the cookie
+    const username = req.cookies.username;
+
+    if (!username) {
+      return res.status(401).json({ error: 'Unauthorized: No username found in cookies' });
+    }
+
     const now = new Date();
     const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-    // Get total passwords
-    const totalPasswords = await Vault.countDocuments();
+    // Get total passwords for this user
+    const totalPasswords = await Vault.countDocuments({ username });
 
-    // Get today's retrievals
+    // Get today's retrievals for this user
     const todayRetrievals = await Analytics.countDocuments({
+      username,  // filter by username
       action: 'retrieve',
       timestamp: { $gte: dayAgo }
     });
 
-    // Get active users (users who performed any action in last 24 hours)
+    // Get active users (users who performed any action in the last 24 hours, filter by this user)
     const activeUsers = await Analytics.distinct('username', {
+      username,  // filter by username
       timestamp: { $gte: dayAgo }
     });
 
-    // Get last 7 days retrievals
+    // Get last 7 days retrievals for this user
     const dailyRetrievals = await Analytics.aggregate([
       {
         $match: {
+          username,  // filter by username
           action: 'retrieve',
           timestamp: { $gte: weekAgo }
         }
@@ -451,10 +460,11 @@ app.get('/api/dashboard-stats', async (req, res) => {
       }
     ]);
 
-    // Get hourly usage pattern
+    // Get hourly usage pattern for this user
     const hourlyPattern = await Analytics.aggregate([
       {
         $match: {
+          username,  // filter by username
           timestamp: { $gte: dayAgo }
         }
       },
@@ -471,8 +481,8 @@ app.get('/api/dashboard-stats', async (req, res) => {
       }
     ]);
 
-    // Get recent activity
-    const recentActivity = await Analytics.find()
+    // Get recent activity for this user
+    const recentActivity = await Analytics.find({ username })  // filter by username
       .sort({ timestamp: -1 })
       .limit(10);
 
@@ -489,6 +499,7 @@ app.get('/api/dashboard-stats', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
