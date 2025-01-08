@@ -31,7 +31,8 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   salt: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  descriptors: { type: Array, default: [] }
+  descriptors: { type: Array, default: [] },
+  failedLoginAttempts:{type:Number, default:0}
 });
 
 const User = mongoose.model('User', userSchema);
@@ -348,15 +349,52 @@ const authenticateUser = async (username, password) => {
   return user;
 };
 
-// The rest of your login endpoint remains the same
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
-  if (!validator.isAlphanumeric(username) || !validator.isLength(password, { min: 8 })) {
-    return res.status(400).send('Invalid input');
+
+  // Validate inputs before checking for invalid username or password
+  if (!username || !password) {
+    return res.status(400).send('Username and password are required');
   }
+  if (!validator.isAlphanumeric(username)) {
+    return res.status(400).send('Username must be alphanumeric');
+  }
+  if (!validator.isLength(password, { min: 8 })) {
+    return res.status(400).send('Password must be at least 8 characters long');
+  }
+
   try {
-    await authenticateUser(username, password);
-    
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid username or password' });
+    }
+
+    const key = generateKey(password, user.salt);
+    const hashedPassword = key.toString('hex');
+
+    if (hashedPassword !== user.password) {
+      // Increment failed login attempts
+      user.failedLoginAttempts += 1;
+      await user.save();
+
+      // If failed attempts exceed 5, delete the user and their vault
+      if (user.failedLoginAttempts >= 5) {
+        // Delete the vault associated with this user
+        await Vault.deleteOne({ username });
+
+        // Delete the user
+        await User.deleteOne({ username });
+
+        return res.status(400).json({ success: false, message: 'Too many failed login attempts. User and vault deleted.' });
+      }
+
+      return res.status(400).json({ success: false, message: 'Invalid username or password' });
+    }
+
+    // Reset failed login attempts on successful login
+    user.failedLoginAttempts = 0;
+    await user.save();
+
     // Set the username in a cookie (expires in 1 hour)
     res.cookie('username', username, { maxAge: 3600000 }); // Cookie expires in 1 hour
     res.json({ success: true });
@@ -458,8 +496,13 @@ app.get('/api/dashboard-stats', async (req, res) => {
     const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-    // Get total passwords for this user
-    const totalPasswords = await Vault.countDocuments({ username });
+    const vault = await Vault.findOne({ username });
+
+    
+      const totalPasswords = vault.encryptedVault.split('|').length;
+      console.log(`Total passwords: ${totalPasswords}`);
+   
+
 
     // Get today's retrievals for this user
     const todayRetrievals = await Analytics.countDocuments({
@@ -468,11 +511,12 @@ app.get('/api/dashboard-stats', async (req, res) => {
       timestamp: { $gte: dayAgo }
     });
 
-    // Get active users (users who performed any action in the last 24 hours, filter by this user)
-    const activeUsers = await Analytics.distinct('username', {
-      username,  // filter by username
-      timestamp: { $gte: dayAgo }
-    });
+    // Get active users (users who performed any action in the last 24 hours)
+const activeUsers = await Analytics.distinct('username', {
+  timestamp: { $gte: dayAgo } // Filter only by timestamp
+});
+
+console.log(activeUsers);
 
     // Get last 7 days retrievals for this user
     const dailyRetrievals = await Analytics.aggregate([
