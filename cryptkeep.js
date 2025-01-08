@@ -76,7 +76,6 @@ const decryptData = (encryptedData, iv, username, salt) => {
   return JSON.parse(decryptedData.toString());
 };
 
-// Store endpoint
 app.post('/store', async (req, res) => {
   const { username, data } = req.body;
 
@@ -86,24 +85,33 @@ app.post('/store', async (req, res) => {
   }
 
   try {
-    const salt = crypto.randomBytes(16).toString('hex'); // Generate a new salt for each user
-    const { iv, encryptedVault } = encryptData(data, username, salt);
+    const salt = crypto.randomBytes(16).toString('hex'); // Generate a new salt
+    const { iv, encryptedVault } = encryptData(data, username, salt); // Encrypt the data
 
-    // Check if a vault exists for the user
+    // Find the user's vault
     let vault = await Vault.findOne({ username });
+
     if (vault) {
-      vault.encryptedVault = encryptedVault;
-      vault.iv = iv;
-      vault.salt = salt; // Store the salt
+      // Append the new encrypted data to the existing encryptedVault string
+      vault.encryptedVault += `|${encryptedVault}`;
+      vault.iv += `|${iv}`; // Append the IV (keep a separator)
+      vault.salt += `|${salt}`; // Append the salt (keep a separator)
     } else {
-      vault = new Vault({ username, encryptedVault, iv, salt });
+      // If no vault exists, create a new one
+      vault = new Vault({
+        username,
+        encryptedVault, // Save as a single string
+        iv,
+        salt,
+      });
     }
 
     await vault.save();
     await new Analytics({
       username,
-      action: 'store'
+      action: 'store',
     }).save();
+
     res.status(200).json({ message: 'Data stored successfully in vault' });
   } catch (err) {
     console.error('Error storing data:', err.message);
@@ -111,34 +119,62 @@ app.post('/store', async (req, res) => {
   }
 });
 
-// Retrieve endpoint
-app.post('/retrieve', async (req, res) => {
-  const { username } = req.body;
 
-  // Validate input
-  if (!username) {
+app.post('/retrieve', async (req, res) => {
+  const { username, search } = req.body;
+
+  // Validate inputs
+  if (!username || !search) {
     return res.status(400).json({ message: 'Invalid input' });
   }
 
   try {
-    // Find the user's vault in the database
     const vault = await Vault.findOne({ username });
     if (!vault) {
       return res.status(404).json({ message: 'Vault not found' });
     }
 
-    // Decrypt the vault data using the stored salt and username
-    const decryptedData = decryptData(vault.encryptedVault, vault.iv, username, vault.salt);
+    // Split the concatenated strings
+    const encryptedVaults = vault.encryptedVault.split('|');
+    const ivs = vault.iv.split('|');
+    const salts = vault.salt.split('|');
+
+    // Decrypt each entry and filter by the search query
+    const results = encryptedVaults.map((encryptedData, index) => {
+      const decryptedData = decryptData(
+        encryptedData,
+        ivs[index],
+        username,
+        salts[index]
+      );
+      return decryptedData;
+    });
+
+    // Filter the decrypted results
+    const filteredResults = results.filter(item => {
+      return (
+        item.description?.toLowerCase().includes(search.toLowerCase()) ||
+        item.email?.toLowerCase().includes(search.toLowerCase()) ||
+        item.password?.toLowerCase().includes(search.toLowerCase())
+      );
+    });
+
+    if (filteredResults.length === 0) {
+      return res.status(404).json({ message: 'No matching records found' });
+    }
+
     await new Analytics({
       username,
-      action: 'retrieve'
+      action: 'retrieve',
     }).save();
-    res.status(200).json(decryptedData);
+
+    res.status(200).json(filteredResults);
   } catch (err) {
     console.error('Error retrieving data:', err.message);
     res.status(500).json({ message: 'Error retrieving data: ' + err.message });
   }
 });
+
 
 
 // Create a transporter object using Gmail's SMTP server

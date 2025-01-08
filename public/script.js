@@ -133,27 +133,30 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
 
  document.getElementById('search-btn')?.addEventListener('click', async () => {
   const username = Cookies.get('username'); // Retrieve username from cookies
+  const search = document.getElementById('search').value;
 
   try {
     const response = await fetch(`${apiUrl}/retrieve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ username, search }),
     });
 
     if (response.ok) {
       const data = await response.json();
       console.log('Retrieved Data:', data); // Log the raw response data
 
-      // Check if data is an object and contains the necessary properties
-      if (data && typeof data === 'object') {
+      // Check if data is an array
+      if (Array.isArray(data)) {
         // Display the data
         const resultsList = document.getElementById('results');
         resultsList.innerHTML = ''; // Clear previous results
 
-        const li = document.createElement('li');
-        li.textContent = `${data.description} - ${data.email} - ${data.password}`;
-        resultsList.appendChild(li);
+        data.forEach(entry => {
+          const li = document.createElement('li');
+          li.textContent = `${entry.description} - ${entry.email} - ${entry.password}`;
+          resultsList.appendChild(li);
+        });
       } else {
         alert('Unexpected data format received from the server.');
       }
@@ -166,6 +169,7 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
     console.error('Error:', error);
   }
 });
+
 
 // Face ID Registration
 async function registerWithFaceID(username) {
@@ -472,6 +476,7 @@ document.getElementById('verify-otp-btn')?.addEventListener('click', async () =>
     otpFeedback.style.color = 'red';
   }
 });
+
 
 
 
