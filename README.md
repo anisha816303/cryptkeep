@@ -15,8 +15,10 @@ clone the repo:</br>
   <li>Backend is on cryptkeep.js file</li>
   </ol>
 </br>
-Dependancies for faceid: npm install face-api.js validator mongoose
-
+Dependancies for faceid: 
+npm install face-api.js validator mongoose
+npm install nodemailer
+npm install @sendgrid/mail
   
 
 
